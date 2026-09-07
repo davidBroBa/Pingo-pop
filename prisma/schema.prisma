@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model Category {
+  id          Int       @id @default(autoincrement())
+  name        String
+  slug        String    @unique
+  description String?   @db.Text
+  image       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  products    Product[]
+}
+
+model Product {
+  id      Int      @id @default(autoincrement())
+  name    String
+  slug    String   @unique
+  description String? @db.Text
+  price   Decimal  @db.Decimal(10, 2)
+  image   String?
+  featured Boolean  @default(false)
+  active   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  quoteRequestItems QuoteRequestItem[]
+}
+
+model QuoteRequest {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String?
+  phone     String
+  details   String   @db.Text
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items QuoteRequestItem[]
+}
+
+model QuoteRequestItem {
+  id             Int @id @default(autoincrement())
+  quantity       Int @default(1)
+  productId      Int
+  quoteRequestId Int
+
+  product      Product      @relation(fields: [productId], references: [id])
+  quoteRequest QuoteRequest @relation(fields: [quoteRequestId], references: [id])
+
+  createdAt DateTime @default(now())
+}
