@@ -7,6 +7,8 @@ import { useState } from "react";
 import { QuoteCartForm } from "@/components/sections/QuoteCartForm/QuoteCartForm";
 import { useQuoteCart } from "@/context/QuoteCartContext";
 
+import { MainLayout } from "@/components/layout";
+
 export default function CotizacionPage() {
   const { items, removeItem, updateQuantity, clearCart } = useQuoteCart();
   const [submitted, setSubmitted] = useState(false);
@@ -63,6 +65,7 @@ export default function CotizacionPage() {
   }
 
   return (
+    <MainLayout>
     <main className="min-h-screen bg-white px-6 py-20">
       <div className="mx-auto max-w-5xl">
         <Link
@@ -224,5 +227,6 @@ export default function CotizacionPage() {
         )}
       </div>
     </main>
+    </MainLayout>
   );
 }

@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { QuoteForm } from "@/components/sections/QuoteForm";
 import { prisma } from "@/lib/prisma";
 
+import { MainLayout } from "@/components/layout";
+
 type ProductPageProps = {
   params: Promise<{ slug: string }>;
 };
@@ -29,6 +31,7 @@ export default async function ProductPage({
   const price = product.price.toString();
 
   return (
+    <MainLayout>
     <main className="min-h-screen bg-white px-6 py-20">
       <div className="mx-auto max-w-7xl">
         <Link
@@ -73,5 +76,6 @@ export default async function ProductPage({
         </div>
       </div>
     </main>
+    </MainLayout>
   );
 }

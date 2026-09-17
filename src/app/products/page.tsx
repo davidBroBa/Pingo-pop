@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { MainLayout } from "@/components/layout";
 
 export default async function ProductsPage() {
   const products = await prisma.product.findMany({
@@ -15,6 +16,7 @@ export default async function ProductsPage() {
   });
 
   return (
+    <MainLayout>
     <main className="min-h-screen bg-white px-6 py-20">
       <Link
         href="/"
@@ -74,5 +76,6 @@ export default async function ProductsPage() {
         </div>
       </div>
     </main>
+    </MainLayout>
   );
 }

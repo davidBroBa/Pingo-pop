@@ -1,7 +1,10 @@
 import Link from "next/link";
 
+import { MainLayout } from "@/components/layout";
+
 export default function ContactoPage() {
   return (
+     <MainLayout>
     <main className="min-h-screen bg-white px-6 py-20">
       <div className="mx-auto max-w-4xl">
         <Link
@@ -57,5 +60,6 @@ export default function ContactoPage() {
         </div>
       </div>
     </main>
+    </MainLayout>
   );
 }
