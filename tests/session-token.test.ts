@@ -1,0 +1,151 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+
+import {
+  buildSessionPayload,
+  signSession,
+  verifySession,
+} from "../src/lib/auth/session-token";
+
+/**
+ * El secreto se fija antes de firmar: `getSecret` lo lee del entorno en el
+ * momento de firmar, asi que basta con asignarlo al arrancar el fichero.
+ */
+process.env.SESSION_SECRET = "secreto-de-prueba-de-32-caracteres-minimo!!";
+
+/** Token de administrador valido, reutilizado por varias pruebas. */
+async function adminToken(): Promise<string> {
+  return signSession(buildSessionPayload(1, "ADMIN"));
+}
+
+describe("firma de sesion", () => {
+  it("acepta un token recien firmado", async () => {
+    const session = await verifySession(await adminToken());
+    // `assert.ok` estrecha el tipo: sin esto TypeScript no sabe que `session`
+    // deja de ser `null` despues de la comprobacion.
+    assert.ok(session !== null, "el token recien firmado deberia validar");
+    assert.equal(session.userId, 1);
+    assert.equal(session.role, "ADMIN");
+  });
+
+  it("rechaza un token sin cookie", async () => {
+    assert.equal(await verifySession(undefined), null);
+  });
+
+  it("rechaza un token vacio", async () => {
+    assert.equal(await verifySession(""), null);
+  });
+
+  it("rechaza un token al que le sobra un punto", async () => {
+    const token = await adminToken();
+    assert.equal(await verifySession(`${token}.extra`), null);
+  });
+
+  it("rechaza un token manipulado en el payload", async () => {
+    // Falsifica el base64url del payload para escalarse a ADMIN y reutiliza la
+    // firma de un token legitimo. Es exactamente el ataque que el HMAC evita:
+    // la firma ya no encaja con el cuerpo, asi que debe rechazarse.
+    const forged = Buffer.from(
+      JSON.stringify({
+        userId: 1,
+        role: "ADMIN",
+        iat: 0,
+        exp: Date.now() + 60_000,
+      }),
+    ).toString("base64url");
+    const original = await adminToken();
+    const signature = original.slice(original.lastIndexOf(".") + 1);
+    assert.equal(await verifySession(`${forged}.${signature}`), null);
+  });
+
+  it("rechaza un token con la firma recortada", async () => {
+    const token = await adminToken();
+    const body = token.slice(0, token.lastIndexOf("."));
+    assert.equal(await verifySession(`${body}.AAAA`), null);
+  });
+
+  it("rechaza un token con caracteres no base64 en la firma", async () => {
+    // Una cookie corrupta debe producir un 401 limpio. Si `atob` lanzase, el
+    // error sube hasta el middleware en lugar de convertirse en "sin sesion".
+    const token = await adminToken();
+    const body = token.slice(0, token.lastIndexOf("."));
+    assert.equal(await verifySession(`${body}.no-es-base64$$`), null);
+  });
+
+  it("rechaza un token generado con otro secreto", async () => {
+    const original = process.env.SESSION_SECRET;
+    const token = await adminToken();
+    process.env.SESSION_SECRET = "otro-secreto-distinto-de-32-caracteres!!";
+    try {
+      assert.equal(await verifySession(token), null);
+    } finally {
+      process.env.SESSION_SECRET = original;
+    }
+  });
+
+  it("rechaza un token expirado", async () => {
+    const expired = await signSession({
+      userId: 7,
+      role: "BUYER",
+      iat: Date.now() - 10_000,
+      exp: Date.now() - 1,
+    });
+    assert.equal(await verifySession(expired), null);
+  });
+
+  it("rechaza un payload cuyo rol no es valido", async () => {
+    // Se firma de verdad, pero con un rol inventado: la firma es correcta y aun
+    // asi tiene que rechazarse, porque el rol forma parte del contrato.
+    const bogus = await signSession({
+      userId: 1,
+      role: "ROOT" as "BUYER",
+      iat: Date.now(),
+      exp: Date.now() + 60_000,
+    });
+    assert.equal(await verifySession(bogus), null);
+  });
+
+  it("rechaza un payload con userId no entero", async () => {
+    const forged = await signSession({
+      userId: 1.5,
+      role: "ADMIN",
+      iat: Date.now(),
+      exp: Date.now() + 60_000,
+    });
+    assert.equal(await verifySession(forged), null);
+  });
+
+  it("falla en lugar de firmar cuando falta SESSION_SECRET", async () => {
+    const original = process.env.SESSION_SECRET;
+    delete process.env.SESSION_SECRET;
+    try {
+      await assert.rejects(() => signSession(buildSessionPayload(1, "ADMIN")));
+    } finally {
+      process.env.SESSION_SECRET = original;
+    }
+  });
+
+  it("falla cuando SESSION_SECRET es demasiado corto", async () => {
+    const original = process.env.SESSION_SECRET;
+    process.env.SESSION_SECRET = "corto";
+    try {
+      await assert.rejects(() => signSession(buildSessionPayload(1, "ADMIN")));
+    } finally {
+      process.env.SESSION_SECRET = original;
+    }
+  });
+
+  it("devuelve null, y no lanza, cuando SESSION_SECRET falta al verificar", async () => {
+    // El camino de verificacion se ejecuta en el middleware. Si launchara la
+    // excepcion, una cookie de sesion con el secreto caido tumbaria el panel
+    // entero con un 500 en vez de redirigir a /login.
+    const original = process.env.SESSION_SECRET;
+    const token = await adminToken();
+    delete process.env.SESSION_SECRET;
+    try {
+      assert.equal(await verifySession(token), null);
+    } finally {
+      process.env.SESSION_SECRET = original;
+    }
+  });
+});

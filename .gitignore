@@ -1,0 +1,70 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+# ...except the template: no contiene secretos y es lo que documenta qué variables hacen falta
+!.env.example
+# el orden importa: `.env*` ignora tambien `.env.example`, asi que hay que
+# re-incluirla despues. Cualquier `.env.local`, `.env.production`... sigue fuera.
+
+# imagenes subidas por los administradores
+/public/uploads/products/*
+!/public/uploads/products/.gitkeep
+
+# configuracion local de esta maquina (MariaDB en 3307 porque el 3306 esta ocupado).
+# docker compose lo lee solo y NO debe viajar al servidor ni a otras maquinas.
+/docker-compose.override.yml
+
+# artefactos de despliegue y temporales
+*.tgz
+*.tar.gz
+*.pid
+*.log
+
+# SO
+Thumbs.db
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+/src/generated/prisma
+
+# configuracion de agentes locales: no es del proyecto
+/.agents
+/.claude
+/.windsurf
+/.opencode

@@ -1,0 +1,70 @@
+# Base de datos de Pingo POP.
+#
+# MariaDB en un contenedor, con un usuario de aplicación que solo tiene permisos
+# sobre la base `pingo_pop`. El usuario `root` existe paraadministration y no lo
+# usa la aplicacion: si la app se compromete, el daño se limita a esa base.
+#
+# Los secretos NO están aquí. Salen de `.env`, que está en `.gitignore`. Las
+# variables se declaran sin valor por defecto a propósito: un compose que arranca
+# con la contraseña en blanco es peor que uno que falla al arrancar.
+
+services:
+  db:
+    image: mariadb:11
+    container_name: pingo-db
+    restart: unless-stopped
+
+    # Sin valor por defecto: si falta la variable, compose falla en vez de
+    # levantar MariaDB con una contraseña vacía.
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?define MARIADB_ROOT_PASSWORD en .env}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-pingo_pop}
+      MARIADB_USER: ${DB_USER:-pingo}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?define DB_PASSWORD en .env}
+
+    # Solo en la loopback. MySQL no se expone a la red del servidor ni a Tailscale:
+    # la aplicación se conecta desde el mismo host.
+    ports:
+      - "127.0.0.1:3306:3306"
+
+    volumes:
+      - pingo-db-data:/var/lib/mysql
+
+    command:
+      # utf8mb4 de principio: los productos llevan acentos y emojis en la
+      # descripción, y `utf8` de 3 bytes los trunca en silencio.
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+
+    healthcheck:
+      # Comprueba lo que la aplicación necesita de verdad: que su propio usuario
+      # puede leer su base. Un `ping` como root solo demostraría que el proceso
+      # responde, no que la app pueda trabajar.
+      #
+      # Dos detalles que costan un bug real:
+      #  - El binario es `mariadb-admin`. En MariaDB 11 no existe `mysqladmin`,
+      #    y el healthcheck fallaba con "executable file not found in $PATH".
+      #  - Va en CMD-SHELL, no en CMD. En forma exec no hay shell que expanda la
+      #    variable, así que `-p$MARIADB_ROOT_PASSWORD` llegaba como texto literal
+      #    y la autenticacion fallaba siempre. El `$$` es para que compose lo
+      #    deje como `$` y lo expanda el shell del contenedor; asi la contraseña
+      #    tampoco queda escrita en `docker inspect`.
+      test:
+        - CMD-SHELL
+        - mariadb-admin ping -h 127.0.0.1 -u "$$DB_USER" -p"$$DB_PASSWORD" --silent
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+    security_opt:
+      - no-new-privileges:true
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  pingo-db-data:

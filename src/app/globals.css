@@ -1,0 +1,160 @@
+@import "tailwindcss";
+
+:root {
+  /* Colores */
+  --background: #ffffff;
+  --background-secondary: #fcfcfc;
+
+  --foreground: #1e1e1e;
+  --foreground-muted: #707070;
+
+  --primary: #2a2227;
+  --accent: #f7b92c;
+
+  --border: #ececec;
+  --card: #fafafa;
+
+  /* Bordes */
+  --radius-button: 16px;
+  --radius-input: 16px;
+  --radius-card: 24px;
+  --radius-image: 24px;
+
+  /* Sombras */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.06);
+
+  /* Animaciones */
+  --transition: 200ms ease;
+
+  /* Tipografía: las variables reales las inyecta next/font en el <body>
+     (--font-fredoka y --font-manrope). Antes estas dos referencias eran
+     circulares y ninguna fuente se aplicaba. */
+  --font-heading: var(--font-fredoka);
+  --font-body: var(--font-manrope);
+
+  /* Extensión cartoon (spec 002 — ver docs/DESIGN.md §2) */
+  --cartoon-pink: #ff6b9d;
+  --cartoon-sky: #4fc3f7;
+  --cartoon-mint: #4ade80;
+  --cartoon-lavender: #a78bfa;
+  --cartoon-coral: #f87171;
+  --cartoon-cream: #fff4d6;
+  --ink: #2a2227;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-background-secondary: var(--background-secondary);
+
+  --color-foreground: var(--foreground);
+  --color-foreground-muted: var(--foreground-muted);
+
+  --color-primary: var(--primary);
+  --color-accent: var(--accent);
+
+  --color-border: var(--border);
+  --color-card: var(--card);
+
+  --color-cartoon-pink: var(--cartoon-pink);
+  --color-cartoon-sky: var(--cartoon-sky);
+  --color-cartoon-mint: var(--cartoon-mint);
+  --color-cartoon-lavender: var(--cartoon-lavender);
+  --color-cartoon-coral: var(--cartoon-coral);
+  --color-cartoon-cream: var(--cartoon-cream);
+  --color-ink: var(--ink);
+
+  --font-heading: var(--font-fredoka);
+  --font-body: var(--font-manrope);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body), sans-serif;
+}
+
+/* Fredoka en todos los titulares, sin depender de clases sueltas.
+   docs/DESIGN.md §3.7 */
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-heading), var(--font-body), sans-serif;
+}
+
+/* ------------------------------------------------------------------ */
+/* Lenguaje cartoon (spec 002 — reglas en docs/DESIGN.md §3)          */
+/* ------------------------------------------------------------------ */
+
+/* Contorno de tinta: la firma del estilo sticker. */
+.cartoon-border {
+  border: 2px solid #2a2227;
+}
+.cartoon-border-thick {
+  border: 3px solid #2a2227;
+}
+
+/* Sombra dura: una silueta desplazada, sin blur. */
+.cartoon-shadow-sm {
+  box-shadow: 2px 2px 0 #2a2227;
+}
+.cartoon-shadow {
+  box-shadow: 4px 4px 0 #2a2227;
+}
+.cartoon-shadow-lg {
+  box-shadow: 6px 6px 0 #2a2227;
+}
+
+/* Squishy hover: se levanta al pasar y se "aplasta" al pulsar. */
+.cartoon-hover {
+  transition:
+    transform 200ms ease-out,
+    box-shadow 200ms ease-out;
+}
+.cartoon-hover:hover {
+  transform: translate(-2px);
+  box-shadow: 6px 6px 0 #2a2227;
+}
+.cartoon-hover:active {
+  transform: translate(2px);
+  box-shadow: 2px 2px 0 #2a2227;
+}
+
+/* Foco visible con el ámbar de la marca. Nunca quitar el outline. */
+.cartoon-focus:focus-visible {
+  outline: 3px solid #f7b92c;
+  outline-offset: 2px;
+}
+
+/* Movimiento reducido: sin traslaciones, rotaciones ni animaciones.
+   Tailwind 4 usa las propiedades `rotate`, `translate` y `scale` en lugar de
+   `transform`, asi que hay que neutralizarlas aparte: si no, los stickers
+   seguirian girando. docs/DESIGN.md §3.9 */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .cartoon-hover,
+  .cartoon-hover:hover,
+  .cartoon-hover:active {
+    transform: none;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    rotate: 0deg !important;
+    translate: none !important;
+    scale: none !important;
+  }
+}
