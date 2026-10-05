@@ -37,7 +37,7 @@ export default async function ProductsPage() {
       <div className="mx-auto max-w-7xl">
         <div className="mb-12 max-w-2xl">
           <p className="cartoon-border cartoon-shadow-sm mb-4 inline-block rotate-[-1deg] rounded-full bg-white px-3 py-1 text-sm font-semibold uppercase tracking-[0.15em] text-primary">
-            Productos
+            Catálogo
           </p>
 
           <h1 className="text-5xl font-bold text-primary">
@@ -45,7 +45,7 @@ export default async function ProductsPage() {
           </h1>
 
           <p className="mt-4 text-lg text-foreground-muted">
-            Productos personalizados creados especialmente para ti.
+            Catálogo de pines metálicos, réplicas en impresión 3D, acrílicos y otros productos. Los fotobotones son los únicos personalizables.
           </p>
         </div>
 

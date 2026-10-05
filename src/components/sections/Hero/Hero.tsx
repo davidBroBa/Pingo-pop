@@ -49,7 +49,7 @@ export function Hero() {
         <div className="max-w-2xl space-y-8">
           <div className="cartoon-border cartoon-shadow-sm inline-flex -rotate-2 rounded-full bg-cartoon-pink px-4 py-2">
             <span className="text-sm font-semibold text-primary">
-              Hecho especialmente para ti
+              Pones de catálogo, listos para pedir
             </span>
           </div>
 
@@ -64,8 +64,8 @@ export function Hero() {
           </Typography>
 
           <Typography variant="body-lg" className="max-w-xl text-foreground-muted">
-            Creamos productos personalizados que convierten tus ideas en algo
-            que puedes tocar, regalar y disfrutar.
+            Catálogo de pines metálicos, réplicas en impresión 3D, acrílicos y otros productos.
+            Los fotobotones son los únicos personalizables. La impresión 3D por archivo es un caso extra.
           </Typography>
 
           <div className="flex flex-col gap-4 sm:flex-row">
@@ -73,7 +73,7 @@ export function Hero() {
               href="/cotizacion"
               className="cartoon-border cartoon-shadow cartoon-hover cartoon-focus inline-flex h-12 items-center justify-center gap-2 rounded-[16px] bg-accent px-6 font-medium text-primary"
             >
-              Crear mi pedido
+              Solicitar cotización
               <ArrowRight size={18} />
             </Link>
 
@@ -81,7 +81,7 @@ export function Hero() {
               href="/products"
               className="cartoon-border cartoon-shadow cartoon-hover cartoon-focus inline-flex h-12 items-center justify-center rounded-[16px] bg-white px-6 font-medium text-foreground"
             >
-              Ver productos
+              Ver catálogo
             </Link>
           </div>
         </div>
@@ -94,7 +94,7 @@ export function Hero() {
             <Star className="absolute -right-5 -top-5 h-14 w-14 rotate-12 text-accent" />
             <div className="cartoon-border cartoon-shadow-sm absolute -bottom-4 -left-4 rotate-[-4deg] rounded-full bg-cartoon-mint px-4 py-2">
               <span className="text-sm font-semibold text-primary">
-                100% personalizado
+                Catálogo
               </span>
             </div>
           </div>

@@ -36,7 +36,7 @@ export function HowItWorks() {
           </Typography>
 
           <Typography variant="body-lg" className="text-foreground-muted">
-            Hacer algo personalizado no tiene por qué ser complicado.
+            Así es el proceso.
           </Typography>
         </div>
 

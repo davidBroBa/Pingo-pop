@@ -66,6 +66,11 @@ export default async function ProductPage({
 
             <p className="mt-6 text-lg leading-8 text-foreground-muted">
               {product.description}
+              {product.slug === "fotobotones" || product.slug === "boton-personalizado" ? (
+                <span className="block mt-2 font-medium text-primary">
+                  • Personalizable con tu foto.
+                </span>
+              ) : null}
             </p>
 
             <p className="cartoon-border cartoon-shadow-sm mt-8 w-fit rounded-2xl bg-accent px-4 py-2 text-3xl font-bold text-primary">

@@ -24,18 +24,17 @@ export function CTA() {
 
           <div className="relative max-w-2xl space-y-7">
             <span className="cartoon-border cartoon-shadow-sm inline-block rotate-[-1deg] rounded-full bg-cartoon-pink px-3 py-1 text-sm font-semibold uppercase tracking-[0.15em] text-primary">
-              Hagámoslo realidad
+              Catálogo
             </span>
 
             <Typography variant="h2" className="font-heading text-white">
-              ¿Tienes una idea?
+              ¿Buscas algo en concreto?
               <br />
-              Nosotros la hacemos.
+              Pide una cotización.
             </Typography>
 
             <Typography variant="body-lg" className="max-w-xl text-white/70">
-              Cuéntanos qué tienes en mente y creemos juntos algo completamente
-              personalizado.
+              Revisa nuestro catálogo y solicita cotización de los productos que ya existen.
             </Typography>
 
             <div className="pt-2">
@@ -43,7 +42,7 @@ export function CTA() {
                 href="/cotizacion"
                 className="cartoon-border cartoon-shadow cartoon-hover cartoon-focus inline-flex items-center gap-2 rounded-2xl bg-accent px-6 py-3 font-semibold text-primary"
               >
-                Crear mi pedido
+                Solicitar cotización
                 <ArrowRight
                   size={18}
                   className="transition-transform duration-200 group-hover:translate-x-1"

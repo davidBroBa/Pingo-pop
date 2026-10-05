@@ -7,24 +7,24 @@ const categories = [
     number: "01",
     title: "Pines metálicos",
     description:
-      "Diseños personalizados con acabados profesionales para marcas, eventos y colecciones.",
+      "Diseños con acabados profesionales para marcas, eventos y colecciones.",
   },
   {
     number: "02",
     title: "Botones fotográficos",
     description:
-      "Recuerdos personalizados con tus imágenes, diseños o ilustraciones favoritas.",
+      "Personalizables con tu foto.",
   },
   {
     number: "03",
     title: "Impresión 3D",
-    description: "Figuras, prototipos y piezas creadas especialmente para ti.",
+    description: "Réplicas ya hechas, listas para pedir en nuestro catálogo.",
   },
   {
     number: "04",
     title: "Llaveros",
     description:
-      "Accesorios personalizados para regalos, negocios y proyectos especiales.",
+      "Productos de catálogo para regalos, negocios y proyectos especiales.",
   },
 ];
 
@@ -42,16 +42,15 @@ export function Categories() {
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div className="max-w-2xl space-y-4">
             <span className="cartoon-border cartoon-shadow-sm inline-block rotate-[-1deg] rounded-full bg-white px-3 py-1 text-sm font-semibold uppercase tracking-[0.15em] text-primary">
-              Lo que hacemos
+              Catálogo
             </span>
 
             <Typography variant="h2" className="font-heading text-primary">
-              Productos hechos para tus ideas
+              Pines, réplicas 3D, acrílicos y más
             </Typography>
 
             <Typography variant="body-lg" className="max-w-xl text-foreground-muted">
-              Convertimos diseños, personajes e ideas en productos
-              personalizados que puedes tener en tus manos.
+              Productos de catálogo: pines metálicos, réplicas en impresión 3D, acrílicos y otros productos.
             </Typography>
           </div>
         </div>

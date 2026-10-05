@@ -138,7 +138,7 @@ export default function CotizacionPage() {
 
                     <div>
                       <p className="text-sm text-foreground-muted">
-                        Producto personalizado
+                        Producto
                       </p>
 
                       <h2 className="mt-1 text-xl font-bold text-primary">
