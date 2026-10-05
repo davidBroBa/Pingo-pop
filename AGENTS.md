@@ -93,7 +93,7 @@ de estilo, no trabajo pendiente.
 - `src/lib/auth/session-token.ts` — firma/verificación HMAC
 - `src/lib/upload-validation.ts` — validación segura de subida
 - `src/lib/prisma-error.ts` — mapeo de errores Prisma
-- `src/context/QuoteCartContext.tsx` — carrito de cotización. **Bug preexistente**: lee `localStorage` y nunca escribe (motivo de la spec 003)
+- `src/context/QuoteCartContext.tsx` — carrito de cotización. **La carga va en un `useEffect` de montaje, nunca en el inicializador de `useState`**: leer `localStorage` ahí hace que el servidor y el cliente pinten ramas distintas y React tire la hidratación (spec 003, T9). El efecto de escritura va protegido por `cargado`
 
 <!-- BEGIN:nextjs-agent-rules -->
 

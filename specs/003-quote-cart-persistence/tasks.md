@@ -37,6 +37,9 @@
 - [x] **T8** — Documentación: `docs/THREATS.md` (nueva sección A5), `docs/SDD.md`
   (§5 y §9), `README.md`, `MEMORY.md`, `CHANGELOG.md`. *(RF-13)*
   Verificado: `npm run check` en verde tras los cambios.
+- [x] **T9** — **H2 cerrado**: el error de hidratación de `/cotizacion`. La carga
+  del carrito pasa del inicializador de `useState` a un `useEffect`, así el
+  servidor y la primera hidratación pintan ambos el carrito vacío. Detalle abajo.
 
 ## T7 en detalle (medido, no supuesto)
 
@@ -55,7 +58,7 @@
 | 11 | Clave con `name` con carácter de control | Rechazado |
 | 12 | Clave con `image` externa (`https://otro/x.jpg`) | Rechazado |
 | 13 | Clave de **70 000 caracteres** (> 64 KiB) | Rechazada sin analizar; página normal |
-| 14 | Consola del navegador | **Con carrito guardado: `Error: Hydration failed`** (ver H2). **Sin carrito guardado: sin errores**, solo el aviso preexistente del logo |
+| 14 | Consola del navegador | **Con carrito guardado: `Error: Hydration failed`** (ver H2, **arreglado en T9**). **Sin carrito guardado: sin errores**, solo el aviso preexistente del logo |
 
 ### Corrección de T7#14: mi primera medición fue falsa
 
@@ -77,7 +80,7 @@ las dos ramas no coinciden.
 Esto **no lo introdujo el `clearCart()`** (T5): lo introduce la persistencia (T4). Y es
 peor de lo que decía H2 antes de medirlo: no es un instante de carrito vacío, es una
 excepción en la consola y un renderizado desperdiciado en cada visita de quien tenga
-carrito. Queda como H2 y necesita su propia spec.
+carrito. **Arreglado en T9**; el razonamiento del arreglo está en esa tarea.
 
 **Aprendizaje sobre el método:** dos lecturasmida"la clave sigue ahí" y "el carrito
 aparece vacío" eran **carreras de medición**, no fallos: `browser.navigate` devuelve
@@ -85,7 +88,66 @@ antes de que React hidrate, y el HTML del servidor siempre lleva el carrito vac�
 Repetido con espera dentro de la página (`requestAnimationFrame`), el borrado de la
 clave corrupta ocurre a los **0 ms**. Queda registrado porque volverá a pasar.
 
-## RF sin tarea que los cubra
+## T9 en detalle — cerrar H2 sin convertirlo en un refactor
+
+**El fallo:** T4 metió `parseStoredCart(localStorage.getItem(...))` en el
+inicializador de `useState`. El inicializador corre en el servidor **y** en el
+cliente, así que el HTML estático de `/cotizacion` se generaba con el carrito
+vacío y la hidratación cliente llegaba con el carrito real. React no puede
+arreglar eso: detecta la diferencia, avisa y **regenera el subárbol entero**,
+tirando el trabajo de renderizado del servidor.
+
+**El arreglo (dos estados, un guard):**
+
+| | Antes (T4) | Ahora (T9) |
+|---|---|---|
+| Estado inicial | `useState(() => parseStoredCart(...))` | `useState([])` + `useState(false)` para `cargado` |
+| Dónde se lee el almacenamiento | en el inicializador, o sea **antes** del primer render | en un `useEffect` de montaje, o sea **después** |
+| Escritura | `useEffect` sobre `[items]` | igual, **pero solo si `cargado`** |
+| Resultado en el servidor | lee `localStorage` inexistente | nunca lo toca |
+| Resultado en la 1ª hidratación | carrito real, distinto del servidor | **carrito vacío = servidor** |
+
+El `if (!cargado) return` en el efecto de escritura **no es opcional**: sin él, el
+efecto vería el `items = []` del primer render y borraría la clave antes de que el
+efecto de lectura la alcanzase. Es el detalle que convierte "arreglo el error de
+hidratación" en "rompo la persistencia".
+
+**Lo que este arreglo NO arregla, y hay que decirlo:** sigue haber un fotograma
+con el mensaje de carrito vacío antes de que aparezca el real. Es
+**intrínseco**: los datos viven en el navegador y el servidor no puede
+conocerlos. `useSyncExternalStore` tampoco lo evitaría (su
+`getServerSnapshot` devuelve `[]` durante la hidratación). Lo que sí se elimina
+es la excepción y el repintado completo.
+
+**Sin test automatizado, y por qué:** este cambio es de *planificación* de
+efectos en un componente de React. El runner es `node:test` sin jsdom, así que
+renderizar el provider no es posible; `quote-cart-storage.ts` no cambia, y sus 107
+tests siguen cubriendo la lógica. La verificación es la que detectó el fallo:
+medición en navegador.
+
+**Deuda que se anota en vez de pagar:** ESLint bloquea `setState` síncrono dentro
+de un efecto (`react-hooks/set-state-in-effect`). Se silenció **con el motivo
+escrito en el propio sitio**: la regla busca estado *derivado* de props u otro
+estado, que se resuelve en el render; aquí se lee un almacén externo mutable que
+solo existe en el navegador. La alternativa correcta es `useSyncExternalStore`,
+pero exige convertir el carrito en un store externo y reescribir los cuatro
+mutadores para que notifiquen. Es un refactor de ~50 líneas en el fichero que
+acabo de verificar a mano; no cabía en "terminar la spec" sin arriesgar una
+regresión silenciosa. Queda anotado en `MEMORY.md` y conviene hacerlo cuando la
+spec de H1 toque este mismo fichero.
+
+### Verificación de T9 (navegador, desde el estado que un usuario real tendría)
+
+| # | Prueba | Resultado |
+|---|---|---|
+| 1 | Cargar `/cotizacion` con carrito en `localStorage` | Carrito visible y **consola sin errores** |
+| 2 | Recarga en frío | Sigue visible, **consola sin errores** |
+| 3 | Clave corrupta `{"a":1}` | Página normal, carrito vacío, **clave eliminada**, sin errores |
+| 4 | Agregar desde `/products/pin-personalizado` | Escribe `[{"id":1,...,"quantity":1}]` |
+| 5 | `/cotizacion` → "Vaciar cotización" | Carrito vacío y **clave eliminada** |
+| 6 | Recarga tras vaciar | Sigue vacío, **clave eliminada**, sin errores |
+
+Gates: `npm run check` → **exit 0**, 107/107 tests, build con 15 rutas.
 
 | RF | Cubierto por |
 |---|---|
@@ -94,16 +156,17 @@ clave corrupta ocurre a los **0 ms**. Queda registrado porque volverá a pasar.
 | RF-12 (cero dependencias) | T3: se reutiliza `zod`; `package.json` sin cambios |
 | RF-13 (nada más cambia) | T6: los 82 tests originales y el build siguen verdes sin tocar sus ficheros |
 
-## Hallazgos que NO pertenecen a esta spec
+## Hallazgos: uno arreglado, dos abiertos
 
-Aparecieron al verificar T7. **No se han arreglado**: quedan documentados en
-`README.md` §Límites conocidos y en `MEMORY.md`. Cada uno necesita su propia spec.
+Aparecieron al verificar T7. **H2 lo arregló T9** (era consecuencia de esta misma
+spec, así que era lo suyo). H1 y H3 **no se han arreglado**: quedan documentados
+en `README.md` §Límites conocidos y en `MEMORY.md`. Cada uno necesita su spec.
 
-| # | Hallazgo | Origen | Por qué no se arregla aquí |
-|---|---|---|---|
-| H1 | **El formulario de cotización devuelve 400 si el email queda vacío.** `QuoteCartForm` manda `email: ""` porque `FormData.get` devuelve cadena vacía, y `CreateQuoteSchema` rechaza `""` como email inválido | Preexistente | El campo está rotulado "opcional" pero el esquema no lo admite vacío. Se comprobó fuera del navegador con `CreateQuoteSchema.safeParse`: `""` rechaza, `undefined`/`null`/válido aceptan |
-| H2 | **`/cotizacion` lanza `Error: Hydration failed` cuando hay carrito guardado.** El servidor prerenderiza la ruta con el carrito vacío y el cliente hidrata con el carrito real; React descarta ese subárbol y lo repinta | **Consecuencia de esta spec** (la introduce la persistencia, T4) | Sin carrito guardado no ocurre. React nombra la causa: *`if (typeof window !== 'undefined')`*. Arreglarlo pide `useSyncExternalStore` o un guard de "montado" |
-| H3 | Dos pulsaciones rápidas de "+" en el mismo frame solo suman 1 | Preexistente | `onClick={() => updateQuantity(item.id, item.quantity + 1)}` lee la cantidad del cierre del render. No lo introduce esta spec |
+| # | Hallazgo | Estado |
+|---|---|---|
+| H1 | **El formulario de cotización devuelve 400 si el email queda vacío.** `QuoteCartForm` manda `email: ""` porque `FormData.get` devuelve cadena vacía, y `CreateQuoteSchema` rechaza `""` como email inválido | **Abierto. Preexistente. El más grave:** es una vía de negocio rota. El campo está rotulado "opcional" pero el esquema no admite vacío. Comprobado fuera del navegador con `CreateQuoteSchema.safeParse`: `""` rechaza, `undefined`/`null`/válido aceptan |
+| H2 | **`/cotizacion` lanzaba `Error: Hydration failed` con carrito guardado** | **Arreglado en T9.** El servidor prerenderiza con el carrito vacío y el cliente hidrataba con el real |
+| H3 | Dos pulsaciones rápidas de "+" en el mismo frame solo suman 1 | **Abierto. Preexistente.** `onClick={() => updateQuantity(item.id, item.quantity + 1)}` lee la cantidad del cierre del render. No lo introduce esta spec |
 
 ## Datos de prueba creados
 

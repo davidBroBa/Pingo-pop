@@ -274,14 +274,6 @@ Cosas que **no** funcionan y conviene saber antes de prometer nada:
   `CreateQuoteSchema` rechaza la cadena vacía como email inválido. **Bug
   preexistente, encontrado al verificar la spec 003, sin arreglar.** Quien quiera
   pedir una cotización sin escribir su correo recibe un error.
-- **`/cotizacion` registra un error de hidratación cuando el navegador tiene un
-  carrito guardado.** La ruta se prerenderiza con el carrito vacío y el navegador
-  lo hidrata con el carrito real, así que React **descarta ese trozo de HTML y lo
-  vuelve a pintar** (`Error: Hydration failed`, en `src/app/cotizacion/page.tsx:112`).
-  La página funciona, pero cada visita de quien tenga carrito guardado gasta un
-  renderizado de más y deja una excepción en la consola. **Consecuencia directa de
-  la spec 003**, sin arreglar. Solo afecta a esa ruta: `itemCount` no lo consume
-  ningún componente.
 - **Rate limit en memoria**: no reparte entre varias instancias (horizontal
   scaling). Aceptable en single-node, no en réplicas.
 - **Las imágenes huérfanas no se limpian**: un producto borrado deja su fichero en

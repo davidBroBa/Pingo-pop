@@ -34,25 +34,46 @@ const QuoteCartContext = createContext<QuoteCartContextType | undefined>(
 );
 
 export function QuoteCartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<QuoteCartItem[]>(() => {
-    if (typeof window === "undefined") {
-      return [];
-    }
+  // El estado arranca SIEMPRE vacio, tambien en el servidor. Leer localStorage en
+  // el inicializador de useState hace que el servidor y el cliente pinten ramas
+  // distintas y React tire la hydration con `Error: Hydration failed`, repintando
+  // el arbol entero. La carga va en un efecto, que solo corre en el navegador, y
+  // asi la primera hidratacion coincide con el HTML ya enviado.
+  const [items, setItems] = useState<QuoteCartItem[]>([]);
+  const [cargado, setCargado] = useState(false);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- esta regla busca estado
+     DERIVADO de props u otro estado, que se resuelve en el render. Aqui se lee un
+     almacen externo mutable (localStorage) que solo existe en el navegador: no hay
+     forma de derivarlo durante el render sin que el servidor y el cliente pinten
+     ramas distintas. La alternativa correcta seria useSyncExternalStore, que exige
+     convertir el carrito en un store externo y reescribir los cuatro mutadores;
+     queda anotado como deuda, no como error. */
+  useEffect(() => {
     try {
-      return parseStoredCart(localStorage.getItem(STORAGE_KEY));
+      setItems(parseStoredCart(localStorage.getItem(STORAGE_KEY)));
     } catch {
       // Almacenamiento no disponible (politica del navegador, modo sin
       // almacen). El carrito sigue funcionando en memoria.
-      return [];
+      setItems([]);
     }
-  });
 
-  // Persiste cada cambio. Es idempotente y se auto-repara: si lo guardado era
-  // invalido, la hidratacion devuelve [] y este efecto termina borrando la
-  // entrada en vez de dejarla corrupta. El `catch` cubre el caso de cuota
-  // llena o modo privado, donde `setItem` lanza.
+    setCargado(true);
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Persiste cada cambio, pero solo cuando ya se ha intentado leer. Sin este
+  // guard, el efecto de escritura veria el carrito vacio del primer render y
+  // borraria la clave antes de que la lectura la alcanzase.
+  //
+  // Es idempotente y se auto-repara: si lo guardado era invalido, la carga
+  // devuelve [] y este efecto termina borrando la entrada en vez de dejarla
+  // corrupta. El `catch` cubre cuota llena o modo privado, donde `setItem` lanza.
   useEffect(() => {
+    if (!cargado) {
+      return;
+    }
+
     try {
       if (items.length === 0) {
         localStorage.removeItem(STORAGE_KEY);
@@ -63,7 +84,7 @@ export function QuoteCartProvider({ children }: { children: ReactNode }) {
     } catch {
       // Sin persistencia, pero sin romper la pagina.
     }
-  }, [items]);
+  }, [items, cargado]);
 
   function addItem(item: Omit<QuoteCartItem, "quantity">) {
     setItems((currentItems) => {

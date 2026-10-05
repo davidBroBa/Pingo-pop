@@ -42,6 +42,16 @@ versionado es [SemVer](https://semver.org/lang/es/).
 - Si el navegador no deja escribir (modo privado, cuota llena, almacenamiento
   deshabilitado por política), la web sigue funcionando solo en memoria, en lugar
   de romperse.
+- **`/cotizacion` ya no registra un error de hidratación cuando el navegador tiene
+  un carrito guardado.** La carga del carrito estaba en el inicializador de
+  `useState`, que corre tanto en el servidor como en el cliente: el HTML
+  prerenderizado salía con el carrito vacío y la hidratación llegaba con el real,
+  así que React **descartaba ese subárbol y lo volvía a pintar**. Ahora la carga
+  ocurre en un efecto de montaje, de modo que la primera hidratación coincide con
+  el HTML ya enviado. Sigue habiendo un fotograma con el mensaje de carrito vacío
+  antes de que aparezca el real: es intrínseco a que los datos vivan en el
+  navegador, y `useSyncExternalStore` tampoco lo evitaría. Lo que se elimina es la
+  excepción y el repintado completo.
 
 ### Añadido
 
@@ -67,11 +77,11 @@ versionado es [SemVer](https://semver.org/lang/es/).
 
 ### Corregido de paso, sin alcance propio
 
-Nada: los tres problemas que aparecieron al verificar esta spec
-(el formulario devuelve **400 si el email opcional se deja vacío**, `/cotizacion`
-registra un **error de hidratación** cuando hay carrito guardado, y dos pulsaciones
-rápidas de "+" solo suman 1) están **documentados y sin arreglar**. Cada uno necesita
-su propia spec.
+Nada: los dos problemas que aparecieron al verificar esta spec y **no** eran
+consecuencia de ella (el formulario devuelve **400 si el email opcional se deja
+vacío**, y dos pulsaciones rápidas de "+" solo suman 1) están **documentados y
+sin arreglar**. Cada uno necesita su propia spec. El tercero, el error de
+hidratación de `/cotizacion`, sí lo causó esta spec y quedó arreglado en T9.
 
 ### Documentación
 - **`README.md` reescrito por completo.** Estaba tal cual salió de
