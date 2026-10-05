@@ -87,6 +87,32 @@ fuera de `public/` y servirlas con comprobacion de permiso.
 | D | Inundar el endpoint publico | Alta | Media | Rate limit por IP | Bajo |
 | I | Exponer datos de contacto | Alta | Baja | El endpoint solo devuelve lo que el remitente acaba de enviar | Bajo |
 
+### A5 Carrito guardado en el navegador (spec 003)
+
+El carrito vive en `localStorage`, asi que **el cliente controla su contenido**: se
+puede editar con las herramientas de desarrollo, dejar una entrada de una version
+anterior o simplesmente quedar corrupta. Antes de la spec 003 esto no existia (el
+carrito vivia solo en memoria y se perdia al recargar); ahora es una frontera de
+confianza real.
+
+| STRIDE | Amenaza | Impacto | Prob | Control | Riesgo residual |
+|---|---|---|---|---|---|
+| T | Alterar precios o nombres del carrito | **Nulo** | Alta | `POST /api/quotes` solo acepta `productId` y `quantity`, los revalida con `CreateQuoteSchema` y el precio lo lee del catalogo | Nulo |
+| T | Romper la pagina con contenido invalido | Media | Media | `parseStoredCart` valida con Zod y ante cualquier fallo devuelve un carrito vacio, en vez de propagar el error | Bajo |
+| D | Guardar una entrada enorme para ralentizar | Baja | Media | Tope de 64 KiB **antes** de `JSON.parse` | Bajo |
+| T | Colocar una ruta de imagen ajena en el carrito | Media | Baja | Se reutiliza `imagePath` de `validation.ts`: solo `/uploads/products/<32 hex>.<ext>` | Bajo |
+| E | Convertir el carrito en codigo ejecutable | **Nulo** | Baja | Los textos se pintan por interpolacion de JSX, que escapa; no hay `dangerouslySetInnerHTML` | Nulo |
+
+**Lo que este control NO cubre, y hay que decir.** El limite de cantidad y de numero
+de productos se respeta al **leer** el carrito, no al construirlo: se puede anadir un
+producto 51 en caliente y el servidor lo rechaza con 400. Es un limite preexistente,
+no de la spec 003.
+
+**Nota sobre el vaciado.** El carrito se borra cuando la solicitud se envia con
+exito. Sin eso, la persistencia permitiria reenviar la misma cotizacion cuantas veces
+se recargue la pagina, y el administrador recibiria solicitudes duplicadas que
+nadie puede distinguir de verdad.
+
 ## 5. Estado de las mitigaciones priorizadas
 
 | # | Mitigacion | Estado | Donde |

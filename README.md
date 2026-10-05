@@ -35,7 +35,7 @@ Repositorio: [`github.com/davidBroBa/Pingo-pop`](https://github.com/davidBroBa/P
 | Base de datos | MariaDB 11 / MySQL 8 | Docker en local, servicio propio en el servidor |
 | Zod | 4.6.5 | Validación en el borde de toda entrada externa |
 | argon2 | 0.45.1 | Hash de contraseñas (argon2id) |
-| Tests | `node:test` + `tsx` 4.23 | 10 suites, 82 pruebas, **sin framework adicional** |
+| Tests | `node:test` + `tsx` 4.23 | 13 suites, 107 pruebas, **sin framework adicional** |
 
 Node: **20.9 o superior** (lo exige Next 16). `package.json` no declara `engines`, así
 que npm no te avisará si usas una versión antigua: compruébalo tú (`node -v`).
@@ -114,7 +114,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 | `npm run start` | Ejecuta el build (`next start -p 3000`) |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npm test` | `node --import tsx --test "tests/**/*.test.ts"` — 82 pruebas, 10 suites |
+| `npm test` | `node --import tsx --test "tests/**/*.test.ts"` - 107 pruebas, 13 suites |
 | `npm run check` | **typecheck + lint + test + build**. Es el gate: úsalo antes de entregar |
 | `npm run db:seed` | Crea el ADMIN inicial (argon2id) |
 | `node scripts/check-control-chars.mjs <fichero>` | Detecta bytes de control que rompen el parseo de TypeScript |
@@ -125,7 +125,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 npm run check      # typecheck && lint && test && build
 ```
 
-Estado actual (2026-10-05): **typecheck OK, lint OK, 82/82 tests, build OK (15
+Estado actual (2026-10-05): **typecheck OK, lint OK, 107/107 tests, build OK (15
 rutas)**. `npm audit` deja **8 vulnerabilidades altas residuales, todas en
 herramientas de desarrollo** (`eslint-config-next → fast-glob → micromatch →
 braces`, sin parche disponible) y **no llegan a runtime**. El detalle está en
@@ -158,7 +158,7 @@ src/
 prisma/
   schema.prisma, migrations/  Las migraciones SÍ se versionan
   seed.ts, make-buyer.ts
-tests/            10 suites con node:test
+tests/            13 suites con node:test (sin jsdom)
 docs/             SDD, THREATS, DESIGN, GATES, DEPLOY, PUBLICAR, constitution
 specs/            001-pingo-rework, 002-cartoon-visual (spec, plan, tasks)
 ```
@@ -269,9 +269,19 @@ Dos avisos que cuestan tiempo si no los conoces:
 
 Cosas que **no** funcionan y conviene saber antes de prometer nada:
 
-- **El carrito de cotización no se persiste.** `src/context/QuoteCartContext.tsx`
-  lee `localStorage` al inicializar pero **nunca escribe**, así que al recargar la
-  página el carrito se vacía. Bug preexistente, requiere su propia spec.
+- **El formulario de cotización devuelve 400 si el email queda vacío.** El campo
+  está marcado como opcional en la interfaz, pero `QuoteCartForm` manda `""` y
+  `CreateQuoteSchema` rechaza la cadena vacía como email inválido. **Bug
+  preexistente, encontrado al verificar la spec 003, sin arreglar.** Quien quiera
+  pedir una cotización sin escribir su correo recibe un error.
+- **`/cotizacion` registra un error de hidratación cuando el navegador tiene un
+  carrito guardado.** La ruta se prerenderiza con el carrito vacío y el navegador
+  lo hidrata con el carrito real, así que React **descarta ese trozo de HTML y lo
+  vuelve a pintar** (`Error: Hydration failed`, en `src/app/cotizacion/page.tsx:112`).
+  La página funciona, pero cada visita de quien tenga carrito guardado gasta un
+  renderizado de más y deja una excepción en la consola. **Consecuencia directa de
+  la spec 003**, sin arreglar. Solo afecta a esa ruta: `itemCount` no lo consume
+  ningún componente.
 - **Rate limit en memoria**: no reparte entre varias instancias (horizontal
   scaling). Aceptable en single-node, no en réplicas.
 - **Las imágenes huérfanas no se limpian**: un producto borrado deja su fichero en

@@ -3,12 +3,31 @@
 ## Propósito
 Este fichero define las reglas operativas y trampas para trabajar en **Pingo POP**. Es la referencia local del proyecto: lo que no esté aquí, no debe asumirse.
 
+## Punto de entrada (si acabas de llegar, léelo en este orden)
+1. **Este fichero** — reglas, principios y trampas.
+2. **`MEMORY.md`** — la **fase actual**, las decisiones ya tomadas *y su porqué*, y los próximos pasos. Es el único sitio donde se mira primero.
+3. **`specs/<NNN>-<nombre>/`** de la spec en curso: `spec.md` → `plan.md` → `tasks.md`. En `tasks.md` está el estado real de cada tarea **con la nota de su verificación**; no confíes en un checkbox sin nota.
+4. **Solo entonces, el código.**
+
+**Comprueba la fase antes de tocar nada.** Si `MEMORY.md` dice que hay una spec
+abierta, su `spec.md` está pendiente de aprobación y **no se escribe código** hasta
+que el usuario la apruebe. Flujo obligatorio (skill `proyecto-estandar`, nivel B):
+
+```
+spec.md  →  aclaración con el usuario  →  plan.md  →  tasks.md
+                                                      ↓
+                          gates en verde  ←  validación  ←  código (tests primero)
+```
+
+Las specs cerradas (`001`, `002`) están **completas y desplegadas**; son referencia
+de estilo, no trabajo pendiente.
+
 ## Comandos (local y servidor)
 - `npm run dev` — desarrollo (puerto 3000)
 - `npm run build` — build de producción
 - `npm run start` — ejecuta build (`next start -p 3000`)
 - `npm run lint` — ESLint
-- `npm run test` — `node --import tsx --test "tests/**/*.test.ts"` (82 tests, 10 suites)
+- `npm run test` — `node --import tsx --test "tests/**/*.test.ts"` (107 tests, 13 suites)
 - `npm run validate` — valida `src/data/*.json` (no usado actualmente)
 - `npm run typecheck` — `tsc --noEmit`
 - `npm run check` — typecheck + lint + test + build (ideal antes de subir)
@@ -17,12 +36,12 @@ Este fichero define las reglas operativas y trampas para trabajar en **Pingo POP
 - `src/app/` — App Router de Next.js 16
 - `src/app/api/` — rutas API (Zod en borde, 401/403 por rol, rate limit donde aplica)
 - `src/components/` — componentes co-ubicados con su `.css`
-- `src/lib/` — lógica reutilizable: `auth/`, `prisma.ts`, `env.ts`, `validation.ts`, `quote-schema.ts`, `upload-validation.ts`, `rate-limit.ts`, `prisma-error.ts`
+- `src/lib/` — lógica reutilizable: `auth/`, `prisma.ts`, `env.ts`, `validation.ts`, `quote-schema.ts`, `quote-cart-storage.ts`, `upload-validation.ts`, `rate-limit.ts`, `prisma-error.ts`
 - `src/lib/auth/` — `password.ts` (argon2id), `session-token.ts` (HMAC-SHA256, base64url), `require-admin.ts` (guard servidor), `session.ts` (lectura de cookie)
 - `src/middleware.ts` — protección de `/admin/:path*`
 - `src/generated/prisma/` — cliente Prisma generado (no editar)
 - `prisma/` — schema, migraciones, `seed.ts`
-- `tests/` — 10 suites con `node:test` + `tsx` (sin dependencias nuevas)
+- `tests/` — 13 suites con `node:test` + `tsx` (sin dependencias nuevas, **sin jsdom**: la lógica comprobable va en módulos puros de `src/lib/`, nunca dentro de un componente)
 - `public/uploads/products/` — imágenes subidas por admin (nombres aleatorios, `.gitkeep` versionado)
 
 ## Principios innegociables
@@ -48,25 +67,33 @@ Este fichero define las reglas operativas y trampas para trabajar en **Pingo POP
 - **Cookie forjada**: la firma HMAC debe verificarse (payload + hmac). No basta con que el payload sea parseable.
 
 ## Flujo de trabajo
-1. Leer `MEMORY.md` al empezar.
-2. Si cambias lógica de seguridad/autenticación/subidas → añade/actualiza tests.
-3. Ejecutar `npm run check` (typecheck + lint + test + build).
-4. Al terminar, actualizar `MEMORY.md` con estado, decisiones y próximos pasos.
-5. **Nunca** hacer `git commit`/`push` sin que el usuario lo pida explícitamente.
-6. Trabajar en el servidor SSH cuando esté disponible (usar `srv.ps1` con cuidado, evitando las trampas).
+1. Leer `MEMORY.md` al empezar y comprobar la fase.
+2. Si hay spec abierta: leer su `spec.md` y **esperar la aprobación del usuario**. Ninguna spec se implementa sin aprobación escrita.
+3. Si cambias lógica de seguridad/autenticación/subidas → añade/actualiza tests.
+4. **Test-first**: escribe el test, ejecútalo y **míralo fallar**, luego implementa. Un test que nunca se vio rojo no demuestra nada.
+5. Ejecutar `npm run check` (typecheck + lint + test + build).
+6. Al terminar, actualizar `MEMORY.md` con estado, decisiones y próximos pasos, y marcar los checkboxes de `tasks.md` **con la nota de verificación**.
+7. **Nunca** hacer `git commit`/`push` sin que el usuario lo pida explícitamente.
+8. Antes de commitear: barrido de secretos (`docs/PUBLICAR.md` §2). El repo es **público**: un secreto publicado no se quita con un commit posterior.
+9. Trabajar en el servidor SSH cuando esté disponible (usar `srv.ps1` con cuidado, evitando las trampas).
 
 ## Referencias
 - `README.md` — qué es el proyecto, puesta en marcha, stack, límites conocidos
+- `MEMORY.md` — **fase actual, decisiones con su porqué, próximos pasos**. Se lee antes que nada
 - `CHANGELOG.md` — historial de cambios por versión
-- `docs/PUBLICAR.md` — **checklist antes de publicar el repo**: qué se ignora, barrido de secretos, qué parece secreto y no lo es
+- `docs/PUBLICAR.md` — **checklist antes de cada commit**: qué se ignora, barrido de secretos, qué parece secreto y no lo es
 - `docs/DEPLOY.md` — runbook del despliegue al servidor, con los errores reales y cómo evitarlos
+- `docs/SDD.md` — diseño del sistema: actores, modelo de datos, arquitectura, seguridad, testing
 - `docs/THREATS.md` — modelo STRIDE + Top 10 + pendientes justificados
 - `docs/DESIGN.md` — paleta (fuente de verdad), contraste medido, lenguaje cartoon
-- `specs/001-pingo-rework/` y `specs/002-cartoon-visual/` — spec, plan, tasks con estado real
 - `docs/GATES.md` — gates, auditoría npm, razones de 8 altas residuales (justificadas)
+- `docs/AI.md` — uso responsable de IA: qué se delega en el modelo y qué no
+- `specs/001-pingo-rework/`, `specs/002-cartoon-visual/` — **cerradas**, spec/plan/tasks con estado real. Referencia de estilo
+- `specs/003-quote-cart-persistence/` — **cerrada pero sin commitear ni desplegar**. Persistencia del carrito con validación Zod de lo guardado en `localStorage`. Referencia de estilo del patrón "módulo puro + tests sin DOM"
 - `src/lib/auth/session-token.ts` — firma/verificación HMAC
 - `src/lib/upload-validation.ts` — validación segura de subida
 - `src/lib/prisma-error.ts` — mapeo de errores Prisma
+- `src/context/QuoteCartContext.tsx` — carrito de cotización. **Bug preexistente**: lee `localStorage` y nunca escribe (motivo de la spec 003)
 
 <!-- BEGIN:nextjs-agent-rules -->
 

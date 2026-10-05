@@ -16,7 +16,7 @@ function slugify(value: string): string {
 export { slugify };
 
 /** Reglas comunes de texto corto: sin caracteres de control, longitud acotada. */
-const shortText = (max: number) =>
+export const shortText = (max: number) =>
   z
     .string({ error: "Se espera un texto" })
     .trim()
@@ -27,7 +27,7 @@ const shortText = (max: number) =>
     });
 
 /** Slug: solo minusculas, digitos y guiones. Evita traversal en la URL. */
-const slugText = shortText(80).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
+export const slugText = shortText(80).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
   message: "El slug solo admite minusculas, digitos y guiones",
 });
 
@@ -43,7 +43,7 @@ const slugText = shortText(80).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
  * que cualquier `.transform`: la cadena vacia tiene que dejar de ser cadena
  * antes de llegar a la expresion regular.
  */
-const imagePath = z.preprocess(
+export const imagePath = z.preprocess(
   (valor) =>
     typeof valor === "string" && valor.trim() === "" ? undefined : valor,
   z

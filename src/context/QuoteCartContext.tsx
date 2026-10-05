@@ -3,19 +3,22 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
 
-export type QuoteCartItem = {
-  id: number;
-  name: string;
-  slug: string;
-  price: string;
-  image: string | null;
-  quantity: number;
-};
+import {
+  parseStoredCart,
+  serializeCart,
+  STORAGE_KEY,
+  type QuoteCartItem,
+} from "@/lib/quote-cart-storage";
+
+// El tipo vive en el modulo de almacenamiento porque sale de su esquema. Se
+// re-exporta para no romper a quien lo importaba desde aqui.
+export type { QuoteCartItem };
 
 type QuoteCartContextType = {
   items: QuoteCartItem[];
@@ -30,27 +33,37 @@ const QuoteCartContext = createContext<QuoteCartContextType | undefined>(
   undefined,
 );
 
-const STORAGE_KEY = "pingo-quote-cart";
-
 export function QuoteCartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<QuoteCartItem[]>(() => {
     if (typeof window === "undefined") {
       return [];
     }
 
-    const storedCart = localStorage.getItem(STORAGE_KEY);
-
-    if (!storedCart) {
-      return [];
-    }
-
     try {
-      return JSON.parse(storedCart) as QuoteCartItem[];
+      return parseStoredCart(localStorage.getItem(STORAGE_KEY));
     } catch {
-      localStorage.removeItem(STORAGE_KEY);
+      // Almacenamiento no disponible (politica del navegador, modo sin
+      // almacen). El carrito sigue funcionando en memoria.
       return [];
     }
   });
+
+  // Persiste cada cambio. Es idempotente y se auto-repara: si lo guardado era
+  // invalido, la hidratacion devuelve [] y este efecto termina borrando la
+  // entrada en vez de dejarla corrupta. El `catch` cubre el caso de cuota
+  // llena o modo privado, donde `setItem` lanza.
+  useEffect(() => {
+    try {
+      if (items.length === 0) {
+        localStorage.removeItem(STORAGE_KEY);
+        return;
+      }
+
+      localStorage.setItem(STORAGE_KEY, serializeCart(items));
+    } catch {
+      // Sin persistencia, pero sin romper la pagina.
+    }
+  }, [items]);
 
   function addItem(item: Omit<QuoteCartItem, "quantity">) {
     setItems((currentItems) => {

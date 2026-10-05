@@ -223,7 +223,14 @@ export default function CotizacionPage() {
             </div>
 
             <div id="datos" className="scroll-mt-28 pt-4">
-              <QuoteCartForm onSuccess={() => setSubmitted(true)} />
+              {/* Al enviar bien se vacia el carrito: si no, al recargar el
+                  usuario veria su pedido intacto y podria reenviarlo. */}
+              <QuoteCartForm
+                onSuccess={() => {
+                  setSubmitted(true);
+                  clearCart();
+                }}
+              />
             </div>
           </div>
         )}

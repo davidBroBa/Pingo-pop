@@ -1,10 +1,11 @@
 # MEMORY.md — Pingo POP
 
 ## Estado actual (Octubre 2026)
-- **Fase:** Spec 002 `cartoon-visual` **cerrada**: T1–T12 completadas y **desplegada en producción**
-- **Spec 001:** `001-pingo-rework` (roles BUYER/ADMIN, subida segura de imágenes, HMAC en sesiones, modelo de amenazas, OWASP) — cerrada
+- **Fase:** Spec 003 `quote-cart-persistence` **CERRADA**: T1–T8 completadas y verificadas. **Sin commitear y sin desplegar.**
+- Spec 002 `cartoon-visual` **cerrada** y desplegada en producción.
+- Spec 001 `001-pingo-rework` (roles BUYER/ADMIN, subida segura de imágenes, HMAC en sesiones, modelo de amenazas, OWASP) — cerrada
+- **Tests:** **107/107** (13 suites). Los 82 originales intactos + 25 nuevos de `quote-cart-storage`.
 - **Spec 002:** `002-cartoon-visual` — rediseño visual cartoon/sticker, **sin tocar lógica, APIs, auth, uploads ni tests**
-- **Tests:** **82/82** (10 suites) — `prisma-error` (10), `rate-limit` (14), `session-token` (17), `upload-validation` (11), `validation` (36)
 - **Gates:** typecheck OK, lint OK, tests OK, build OK (15 rutas)
 - **Migraciones:** aplicadas en MariaDB 11 (Linux). Migración `quote_cart` corregida en mayúsculas (`QuoteRequest`) para compatibilidad con `lower_case_table_names=0`
 - **Seguridad:** cookie firmada con HMAC-SHA256 (formato `payload.base64url(hmac)`) en `pp_session`, middleware protege `/admin/*`, `requireAdmin()` revalida rol en servidor, rate limit en memoria (login 10/15m, quotes 5/15m), subida con magic bytes + lista blanca + nombre aleatorio + escritura atómica (`wx`), sin enumeración de usuarios
@@ -52,11 +53,81 @@
 - **Documentación de referencia (5 oct 2026)**: `README.md` reescrito (estaba el de `create-next-app`, en inglés y hablando de Geist/Vercel), `CHANGELOG.md` nuevo, `docs/DEPLOY.md` (runbook con los errores reales del despliegue) y `docs/PUBLICAR.md` (checklist de publicación + barrido de secretos). `.gitignore` reforzado: `docker-compose.override.yml`, `.opencode/`, `*.tgz`, `*.tar.gz`, `*.pid`, `*.log`, `Thumbs.db`.
 
 ## Próximos pasos
-1. Cerrar T7/T10 en `specs/001-pingo-rework/tasks.md` (estado final)
-2. Spec propia para el **carrito persistente** (bug preexistente, ver "Límites conocidos")
-3. Decidir qué hacer con `prisma/make-buyer.ts`: su `BUYER_PASSWORD` fija en el código es una credencial de pruebas que los escáneres de secretos señalan. Inofensiva (base de datos local), pero se puede leer de `.env`.
-4. (Opcional) Instalar los hooks de git: `.git/hooks/` no tiene nada, así que un commit se salta cualquier verificación. Con repo público, un hook de pre-commit que corra el barrido de secretos daría una red de seguridad automática.
-5. (Opcional, no bloquea) `.gitkeep` en `public/uploads/products/` o monitor de disco
+1. **Spec 003 sin commitear ni desplegar**: hay 5 ficheros modificados y 3 nuevos. Commit y subida al servidor requieren permiso explícito.
+2. **Spec para H1** (`email: ""` → 400 en el formulario de cotización). Es el hallazgo más grave: una vía de negocio rota en producción. Probablemente un `preprocess` como el de `imagePath`.
+3. **Spec para H2** (el carrito vacío se ve un instante al recargar, por el prerenderizado estático).
+4. Instalar el bloqueo de gates (`scripts/install-hooks.ps1 -VendorGates` de la skill `proyecto-estandar`). **Pendiente de tu decisión:** hoy `.git/hooks/` está vacío, así que un commit se salta cualquier verificación, y el repo ya es público. También queda el CI (`.github/workflows/gates.yml`).
+5. Cerrar T7/T10 en `specs/001-pingo-rework/tasks.md` (estado final)
+6. Decidir qué hacer con `prisma/make-buyer.ts`: su `BUYER_PASSWORD` fija en el código es una credencial de pruebas que los escáneres de secretos señalan. Inofensiva (base de datos local), pero se puede leer de `.env`.
+7. (Opcional) Añadir `engines` a `package.json`: Next 16 exige Node 20.9+ y ahora nadie avisa si usas una versión antigua.
+8. (Opcional, no bloquea) `.gitkeep` en `public/uploads/products/` o monitor de disco
+9. (Opcional) Decidir si se borran las 2 filas `QuoteRequest` de prueba de la BD local.
+
+## Spec 003 — `quote-cart-persistence` (CERRADA, sin commitear)
+
+**Ficheros:** `specs/003-quote-cart-persistence/{spec.md,plan.md,tasks.md}`.
+T1–T8 cerradas con sus notas de verificación. **Cero dependencias. Sin desplegar.**
+
+**Qué se hizo:** el carrito de cotización se guarda en `localStorage` (`pingo-quote-cart`),
+se hidrata al arrancar y **se vacía cuando la solicitud se envía con éxito**.
+Antes solo se leía y nunca se escribía, así que se perdía al recargar.
+
+**Ficheros de código:** `src/lib/quote-cart-storage.ts` (nuevo, puro, sin DOM),
+`tests/quote-cart-storage.test.ts` (nuevo, 25 casos),
+`src/context/QuoteCartContext.tsx`, `src/app/cotizacion/page.tsx`, y **tres `export`
+añadidos** en `src/lib/validation.ts`.
+
+**Decisiones que conviene no re-litigar:**
+- El tipo `QuoteCartItem` **se infiere del esquema Zod**, no se declara aparte, para que
+  no puedan divergir.
+- La lógica va en un **módulo puro sin DOM** porque el runner es `node:test` **sin
+  jsdom**: una lógica que solo vive en un `useEffect` no se puede testear aquí.
+- Se **reutilizan** `shortText`, `slugText` e `imagePath` de `validation.ts` (por eso se
+  exportan) en vez de duplicar la regex de la ruta de imagen, que es de seguridad.
+- La escritura es un `useEffect` sobre `[items]`: vacío → `removeItem`, si no → `setItem`,
+  en `try/catch`. **Idempotente y auto-repara** una entrada corrupta (la hidratosnada
+  devuelve `[]` y el efecto termina borrando la clave).
+- Sin envoltorio de versión: el carrito es desechable. Si algún día `QuoteCartItem`
+  gana un campo obligatorio, los carritos viejos fallarán la validación y empiezy a
+  quedar vacíos. **Es la degradación pretendida.**
+- Sin sincronización entre pestañas ni caducidad: fuera de alcance, es función nueva.
+
+**Verificación:** `npm run check` **exit 0** (typecheck, lint, **107/107 tests en 13
+suites**, build con 15 rutas). Tests en rojo primero: `Cannot find module
+'../src/lib/quote-cart-storage'`. Manual en navegador: persistencia, cantidades,
+vaciado, envío y **8 casos de `localStorage` corrupto o manipulado**, todos con carrito
+vacío, sin `NaN` y con la clave eliminada. Consola sin errores.
+
+### Trampa de medición (mordí dos veces)
+
+`browser.navigate` devuelve **antes de que React hidrate**, y el HTML del servidor
+siempre lleva el carrito vacío. Leyendo el DOM en ese momento da dos falsos positivos:
+"el carrito no aparece" y "la clave corrupta no se borra". Con espera dentro de la
+página (`requestAnimationFrame`) el borrado ocurre a **0 ms**. Cuando verifiques
+comportamiento de hidratación, **espera dentro de la página**, no desde fuera.
+
+**Y el error que cometí con esto:** leí la consola **después de limpiar el
+`localStorage`**, y concluí "consola sin errores". Con el carrito **guardado** hay un
+`Error: Hydration failed` (H2). Un estado de partida limpio a la hora de medir
+escondió justo el error que la función tenía que cazar. **Antes de afirmar "sin
+errores", deja el `localStorage` en el estado que un usuario real tendría** y carga
+la página en frío.
+
+## Hallazgos que necesitan spec propia
+
+| # | Hallazgo | Estado |
+|---|---|---|
+| **H1** | **El formulario de cotización devuelve 400 si el email queda vacío.** El campo está rotulado "opcional", pero `QuoteCartForm` manda `email: ""` (`FormData.get` devuelve cadena vacía) y `CreateQuoteSchema` rechaza `""` como email inválido. Quien cotiza sin correo recibe error | **Preexistente, sin arreglar.** Comprobado con `CreateQuoteSchema.safeParse`: `""` rechaza, `undefined`/`null`/válido aceptan |
+| **H2** | **`/cotizacion` lanza `Error: Hydration failed` si hay carrito guardado.** El servidor prerenderiza la ruta con el carrito vacío y el cliente hidrata con el real; React descarta ese subárbol y lo repinta. Con carrito vacío no pasa | **Introduce la spec 003** (la persistencia, T4). React nombra la causa: `if (typeof window !== 'undefined')` |
+| **H3** | Dos pulsaciones rápidas de "+" en el mismo frame solo suman 1: el `onClick` lee la cantidad del cierre del render | **Preexistente.** No lo introduce la spec 003 |
+
+Los tres están en `README.md` §Límites conocidos y en `tasks.md` de la spec 003.
+
+## Datos de prueba creados
+
+La verificación de T7 dejó **2 filas `QuoteRequest` (ids 1 y 2)** en la **BD local de
+desarrollo**, con `name = "Prueba Spec 003"`. Verificado con un recuento. No se borran
+sin permiso del usuario: borrar filas es una escritura en base de datos.
 
 ## Repositorio y despliegue
 - **GitHub**: `github.com/davidBroBa/Pingo-pop`, rama `main`, **público**. Commit inicial `bf52fa4` (155 ficheros) subido el 2026-10-05. `main` local sigue a `origin/main`.
@@ -69,4 +140,4 @@
 - **Rate limit en memoria**: no funciona entre múltiples instancias (horizontal scaling). Es aceptable para single-node.
 - **Uploads en disco**: no hay limpieza de imágenes huérfanas (productos eliminados/desactivados). No solicitado, se documenta como deuda consciente.
 - **Sin registro de BUYER**: solo seed/script crea BUYER. No forma parte de esta spec.
-- **El carrito de cotización no se persiste** (bug preexistente, NO tocado por la spec 002): `QuoteCartProvider` lee `localStorage` al inicializar pero **nunca escribe**. Al recargar la página el carrito se vacía. Es funcional, no visual, y la spec 002 prohíbe cambios de comportamiento (RF-9): requiere spec propia.
+- **El carrito de cotización no se persiste** (bug preexistente, NO tocado por la spec 002): `QuoteCartProvider` lee `localStorage` al inicializar pero **nunca escribe**. Al recargar la página el carrito se vacía. Es funcional, no visual, y la spec 002 prohíbe cambios de comportamiento (RF-9): requiere spec propia. **Spec 003 escrita y pendiente de aprobación** (ver arriba). Hay dos defectos más alrededor: la lectura no valida nada (`as QuoteCartItem[]` a ciegas) y el carrito no se vacía tras enviar, lo que con persistencia permitiría cotizaciones duplicadas.

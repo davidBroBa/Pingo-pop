@@ -31,6 +31,7 @@ Ver `prisma/schema.prisma`. Entidades:
 - **Auth**: `argon2` + `crypto.subtle` HMAC-SHA256 + cookie `HttpOnly`, `SameSite=Lax`, `Secure` en producción
 - **Storage**: `public/uploads/products/` (archivos estáticos servidos por Next)
 - **DB**: Prisma con `@prisma/adapter-mariadb`. Config desde `DATABASE_URL` vía `src/lib/env.ts`
+- **Cliente**: el carrito de cotización vive en `localStorage` (`pingo-quote-cart`) y se hidrata en `QuoteCartProvider`. Como el navegador controla ese contenido, se valida con esquema Zod en `src/lib/quote-cart-storage.ts` y se descarta entero ante cualquier fallo; los límites coinciden con los del servidor (cantidad 1–10000, 50 productos)
 
 ## 6. Seguridad
 - Middleware (`src/middleware.ts`) protege `/admin/:path*` → redirige `/login` si sin sesión válida
@@ -54,8 +55,9 @@ Ver `prisma/schema.prisma`. Entidades:
 
 ## 9. Testing
 - `node:test` + `tsx`
-- Suites: `session-token` (firma/verificación/expiración/tamper), `rate-limit` (memoria, ventana), `upload-validation` (magic bytes, whitelist, tamaño), `validation` (Zod + control chars + image ""), `prisma-error` (mapeo códigos)
-- 82/82 passing
+- Suites: `session-token` (firma/verificación/expiración/tamper), `rate-limit` (memoria, ventana), `upload-validation` (magic bytes, whitelist, tamaño), `validation` (Zod + control chars + image ""), `prisma-error` (mapeo códigos), `quote-cart-storage` (carrito guardado: corrupto, enorme, fuera de límites)
+- **Sin jsdom**: la lógica comprobable se extrae a módulos puros de `src/lib/` sin acceso al DOM. Por eso `quote-cart-storage.ts` existe separado del contexto de React, que solo se limita a hidratar y a un efecto de escritura
+- 107/107 passing
 
 ## 10. Despliegue
 - Build con `npm run build` (requiere `DATABASE_URL`, `SESSION_SECRET`)

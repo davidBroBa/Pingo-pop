@@ -20,6 +20,59 @@ versionado es [SemVer](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Arreglado
+
+- **El carrito de cotización ahora sobrevive a una recarga y a un cierre del
+  navegador** (spec `003-quote-cart-persistence`). Antes se leía de `localStorage`
+  al arrancar pero **ningún camino de código escribía la clave**: la lectura era
+  código muerto y cualquier recarga vaciaba el carrito.
+- **El carrito se vacía cuando la solicitud de cotización se envía con éxito.**
+  Sin esto, la persistencia habría convertido un F5 en un reenvío duplicado de la
+  misma cotización, que el administrador no puede distinguir de una nueva.
+- **Lo que hay en `localStorage` se valida con un esquema Zod antes de entrar en el
+  estado.** La lectura anterior era `JSON.parse(storedCart) as QuoteCartItem[]`, una
+  conversión forzada a ciegas. Era inofensiva solo porque nada escribía; al
+  persistir, un `{"a":1}` en la clave provocaba un `TypeError` en `/cotizacion`, y
+  un `price: "abc"` pintaba `NaN MXN`. Los límites coinciden con los del servidor
+  (cantidad 1–10000, máximo 50 productos), más un tope de 64 KiB antes de analizar
+  el texto.
+- Un `localStorage` corrupto, enorme, de una versión anterior o manipulado a mano ya
+  no puede dejar la página sin servir: se descarta entero, se borra la entrada y el
+  carrito empieza vacío.
+- Si el navegador no deja escribir (modo privado, cuota llena, almacenamiento
+  deshabilitado por política), la web sigue funcionando solo en memoria, en lugar
+  de romperse.
+
+### Añadido
+
+- `src/lib/quote-cart-storage.ts`: esquema, `parseStoredCart`, `serializeCart` y la
+  clave. **Va sin DOM a propósito**, porque el runner de tests (`node:test`) no tiene
+  jsdom: la lógica comprobable tiene que poder vivir fuera del componente de React.
+- `tests/quote-cart-storage.test.ts`: 25 casos (JSON corrupto, no-array, campos
+  ausentes, cantidad 0/negativa/decimal/10001, 51 productos, precio no numérico,
+  nombres con caracteres de control, ruta de imagen externa, entrada de 70 000
+  caracteres, e ida y vuelta de la serialización).
+- `docs/THREATS.md` gana la sección **A5** sobre el carrito guardado en el
+  navegador, con la conclusión de que manipular el carrito tiene **impacto nulo**:
+  el servidor solo acepta `productId` y `quantity` y los revalida.
+
+### Cambiado
+
+- `src/lib/validation.ts` exporta `shortText`, `slugText` e `imagePath` (tres
+  palabras, sin cambio de comportamiento). El carrito los **reutiliza** en vez de
+  duplicar la expresión regular de la ruta de imagen, que es una regla de seguridad
+  y no debe poder divergir de la del panel.
+- El tipo `QuoteCartItem` **se infiere del esquema** en lugar de declararse aparte,
+  para que la definición y la validación no puedan separarse.
+
+### Corregido de paso, sin alcance propio
+
+Nada: los tres problemas que aparecieron al verificar esta spec
+(el formulario devuelve **400 si el email opcional se deja vacío**, `/cotizacion`
+registra un **error de hidratación** cuando hay carrito guardado, y dos pulsaciones
+rápidas de "+" solo suman 1) están **documentados y sin arreglar**. Cada uno necesita
+su propia spec.
+
 ### Documentación
 - **`README.md` reescrito por completo.** Estaba tal cual salió de
   `create-next-app` (en inglés, hablando de Geist y de Vercel): no describía el
