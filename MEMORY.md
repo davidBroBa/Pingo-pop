@@ -2,7 +2,6 @@
 
 ## Estado actual (Octubre 2026)
 - **Fase:** Spec 002 `cartoon-visual` **cerrada**: T1–T12 completadas y **desplegada en producción**
-- **Producción:** servidor `srv` (`~/proyectos/pingo-pop`), `next-server` PID 44721, `BUILD_ID v7Y4ofSNf4KkeWY_7E8as`, log en `/tmp/pingo-pop-start-002.log`. Spec 002 verificada **en producción**, no solo en dev local.
 - **Spec 001:** `001-pingo-rework` (roles BUYER/ADMIN, subida segura de imágenes, HMAC en sesiones, modelo de amenazas, OWASP) — cerrada
 - **Spec 002:** `002-cartoon-visual` — rediseño visual cartoon/sticker, **sin tocar lógica, APIs, auth, uploads ni tests**
 - **Tests:** **82/82** (10 suites) — `prisma-error` (10), `rate-limit` (14), `session-token` (17), `upload-validation` (11), `validation` (36)
@@ -53,11 +52,18 @@
 - **Documentación de referencia (5 oct 2026)**: `README.md` reescrito (estaba el de `create-next-app`, en inglés y hablando de Geist/Vercel), `CHANGELOG.md` nuevo, `docs/DEPLOY.md` (runbook con los errores reales del despliegue) y `docs/PUBLICAR.md` (checklist de publicación + barrido de secretos). `.gitignore` reforzado: `docker-compose.override.yml`, `.opencode/`, `*.tgz`, `*.tar.gz`, `*.pid`, `*.log`, `Thumbs.db`.
 
 ## Próximos pasos
-1. **Primer commit**: `git init` ya está hecho pero **no hay ningún commit**. 155 ficheros listos para publicar y verificados sin secretos. Falta el `git add` + `commit` (y el remoto), que requieren que lo pidas.
-2. Cerrar T7/T10 en `specs/001-pingo-rework/tasks.md` (estado final)
-3. Spec propia para el **carrito persistente** (bug preexistente, ver "Límites conocidos")
-4. Decidir qué hacer con `prisma/make-buyer.ts`: su `BUYER_PASSWORD` fija en el código es una credencial de pruebas que los escáneres de secretos señalan. Inofensiva (base de datos local), pero se puede leer de `.env`.
+1. Cerrar T7/T10 en `specs/001-pingo-rework/tasks.md` (estado final)
+2. Spec propia para el **carrito persistente** (bug preexistente, ver "Límites conocidos")
+3. Decidir qué hacer con `prisma/make-buyer.ts`: su `BUYER_PASSWORD` fija en el código es una credencial de pruebas que los escáneres de secretos señalan. Inofensiva (base de datos local), pero se puede leer de `.env`.
+4. (Opcional) Instalar los hooks de git: `.git/hooks/` no tiene nada, así que un commit se salta cualquier verificación. Con repo público, un hook de pre-commit que corra el barrido de secretos daría una red de seguridad automática.
 5. (Opcional, no bloquea) `.gitkeep` en `public/uploads/products/` o monitor de disco
+
+## Repositorio y despliegue
+- **GitHub**: `github.com/davidBroBa/Pingo-pop`, rama `main`, **público**. Commit inicial `bf52fa4` (155 ficheros) subido el 2026-10-05. `main` local sigue a `origin/main`.
+- El remoto tenía antes una versión antigua del proyecto (commit `691d142`, septiembre 2026) **sin historial común**. Antes de reemplazarla se subió la etiqueta **`backup-691d142`**, que mantiene aquel commit alcanzable. Push: `+ 691d142...bf52fa4 main -> main (forced update)`, autorizado expresamente por el usuario.
+- **Autenticación**: hay una credencial de GitHub guardada en Windows Credential Manager (`git:https://github.com`) y el push por **HTTPS funciona sin prompt**. La llave SSH local (`~/.ssh/id_ed25519.pub`, comentario `brole@windows-portfolio-deploy`) **no está registrada** en GitHub (`Permission denied (publickey)`): para usarla hay que añadirla en Settings → SSH keys.
+- **Al ser público, el barrido de secretos pasa a ser obligatorio antes de cada commit**: un secreto publicado no se quita con un commit posterior. Ver `docs/PUBLICAR.md`.
+- **Producción**: servidor `~/proyectos/pingo-pop` (alias `srv`), `next-server` PID 44721, `BUILD_ID v7Y4ofSNf4KkeWY_7E8as`, log `/tmp/pingo-pop-start-002.log`. Spec 002 verificada **en producción**, no solo en dev local.
 
 ## Límites conocidos
 - **Rate limit en memoria**: no funciona entre múltiples instancias (horizontal scaling). Es aceptable para single-node.

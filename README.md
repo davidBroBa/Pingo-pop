@@ -5,6 +5,8 @@ público, carrito de cotización y panel de administración con subida de imáge
 
 ![Portada de Pingo POP](docs/capturas/002-cartoon-visual/despues/01-portada.png)
 
+Repositorio: [`github.com/davidBroBa/Pingo-pop`](https://github.com/davidBroBa/Pingo-pop) — público, rama `main`. Historial en [`CHANGELOG.md`](CHANGELOG.md).
+
 ## Índice
 
 - [Stack](#stack)
@@ -252,7 +254,7 @@ Dos avisos que cuestan tiempo si no los conoces:
 |---|---|
 | `AGENTS.md` | **Reglas operativas y trampas del proyecto.** Léelo primero |
 | `MEMORY.md` | Estado actual y **decisiones con su porqué**. Se actualiza al cerrar cada fase |
-| `docs/PUBLICAR.md` | **Lista de comprobación antes de publicar el repositorio** |
+| `docs/PUBLICAR.md` | **Lista de comprobación de secretos.** Obligatoria antes de **cada commit**: el repo es público |
 | `docs/DEPLOY.md` | Runbook de despliegue al servidor |
 | `docs/DESIGN.md` | Paleta, contraste y lenguaje visual |
 | `docs/SDD.md` | Diseño de software: datos, arquitectura, flujos |

@@ -4,9 +4,12 @@ Checklist para subir Pingo POP a GitHub (o a cualquier remoto) **sin filtrar
 secretos**. Está escrito porque el proyecto se desarrolló sin control de versiones:
 nadie ha hecho todavía un `git add -A` y una auditoría de lo que saldría.
 
-> **Estado:** no hay repositorio git. Nada de esto está commiteado. Las
-> comprobaciones de abajo se ejecutaron sobre el árbol de ficheros el **2026-10-05**
-> y el resultado está al final de cada sección.
+> **Estado: el repositorio ya está publicado.** El 2026-10-05 se hizo el primer
+> commit (`bf52fa4`) y se subió a `github.com/davidBroBa/Pingo-pop`, rama `main`.
+> Es **público**. Este documento sigue siendo la lista de comprobación, pero ahora
+> es de uso **continuo**: cada commit nuevo vuelve a ser público para siempre, y
+> deshacer un commit no borra lo ya subido. Repite el barrido **antes de cada
+> commit**, no solo antes del primero.
 
 ---
 
@@ -141,10 +144,12 @@ git diff --cached --stat                   # tras un git add
 
 ### Verificación ejecutada el 2026-10-05
 
-`git init` ya está hecho (repositorio **sin ningún commit**: `git log` no devuelve
-nada). No se hizo `git add` ni `git commit`, y no hay remoto configurado.
+Repositorio: `github.com/davidBroBa/Pingo-pop`, rama `main`, commit `bf52fa4`,
+**público**. `main` local sigue a `origin/main` (0 ahead / 0 behind) y el árbol de
+trabajo está limpio.
 
-**Lo que entraría en el primer commit: 155 ficheros.** Comprobado uno a uno:
+**Lo que entró en el commit: 155 ficheros.** Comprobado uno a uno antes de
+commitear:
 
 | Comprobación | Resultado |
 |---|---|
@@ -161,6 +166,27 @@ nada). No se hizo `git add` ni `git commit`, y no hay remoto configurado.
 Reparto: `src/` 92, `docs/` 17, `prisma/` 8, `public/` 7, `specs/` 6, `tests/` 5,
 `scripts/` 3 y 24 ficheros de configuración y documentación en raíz.
 
+**Y después de subirlo, comprobado contra la API de GitHub** (que es lo que de
+verdad importa: lo que GitHub sirve, no lo que tú crees que subiste):
+
+| Ruta | Respuesta | Lectura |
+|---|---|---|
+| `.env` | **404** | No está publicado |
+| `.env.local` | **404** | No está publicado |
+| `docker-compose.override.yml` | **404** | No está publicado |
+| `src/generated/prisma/client.ts` | **404** | Generado, no publicado |
+| `public/uploads/products/1382341486…jpg` | **404** | Subidas de admin, no publicadas |
+| `.env.example` | **200** | Publicado, correcto |
+| `README.md`, `CHANGELOG.md`, `docs/PUBLICAR.md`, `docs/DEPLOY.md` | **200** | Publicados |
+| `prisma/schema.prisma` | **200** | Publicado, correcto |
+
+Puedes repetir esa comprobación en cualquier momento:
+
+```bash
+curl -s -o NUL -w "%{http_code}\n" https://api.github.com/repos/davidBroBa/Pingo-pop/contents/.env
+# 404 es lo correcto
+```
+
 > **Matiz sobre `git check-ignore`**: imprime la regla que decide aunque esa regla
 > sea una negación. Para `.env.example` dice `36:!.env.example`: es el patrón que lo
 > **deja** pasar. La prueba que no admite matices es `git status --untracked-files=all`:
@@ -175,18 +201,26 @@ npm run check               # typecheck + lint + 82 tests + build: todo verde
 Estado de los gates tras la documentación (2026-10-05): **typecheck OK, lint OK,
 82/82 tests en 10 suites, build OK con 15 rutas.**
 
-## 6. Historial: el peligro que aún no existe
+## 6. Historial: por qué esto se lee ahora
 
-Hoy no hay historial, así que **no hay secretos en commits anteriores**. Eso es una
-ventaja: si mañana se mete una clave por error y se commitea, reescribir el
-historial es un trabajo aparte.
+El repositorio es **público** y ya tiene un commit publicado. Esto cambia el
+equilibrio: hoy no hay secretos en el historial, y **mantenerlo así es trabajo
+permanente**.
 
-- **Antes de commitear**: usa `git add` con nombre de fichero, no `git add -A` a
-  ciegas, y usa `git diff --cached` antes de commitear.
+- **Antes de cada commit**: repite el barrido de la §2. Un secreto publicado en un
+  repositorio público no se quita con un commit nuevo: aunque lo borres después,
+  queda en el historial y en las caches y forks de terceros.
+- **Usa `git add` con nombre de fichero** cuando dudes, no `git add -A` a ciegas, y
+  revisa `git diff --cached` antes de commitear.
 - **Nunca commitees `.env` "para que no se pierda"**. Va en el gestor de secretos
   del servidor.
 - **`git commit --no-verify`**: si lo usas, deja escrito el motivo en el mensaje del
   commit. Los hooks existen por algo.
+- Si algún día hay que **reescribir el historial** (porque entró un secreto), es un
+  trabajo aparte y coordinate: `git filter-repo` sobre el clon, un `push --force` a
+  todas las ramas y etiquetas, y avisar a quien tenga un fork. El
+  `push --force` aquí se hizo **solo** para reemplazar un `main` antiguo, y se dejó
+  la etiqueta `backup-691d142` para que nada quedara huérfano.
 
 ## 7. Lo que este repositorio **no** incluye a propósito
 
@@ -197,14 +231,15 @@ historial es un trabajo aparte.
 | `public/uploads/products/*` | Datos de clientes subidos por los administradores |
 | `docker-compose.override.yml` | Específico de la máquina de desarrollo |
 | La IP del servidor y su usuario | No hacen falta para trabajar con el proyecto; se acceden por el alias `srv` |
-| Historial de commits | El proyecto aún no se ha iniciado en git |
+| Historial de la versión antigua | Reemplazado por el proyecto completo. Sigue accesible en la etiqueta `backup-691d142` |
 
 ## 8. Resumen ejecutivo
 
 | Pregunta | Respuesta |
 |---|---|
-| ¿Hay secretos en lo que se publicaría? | **No.** Ningún valor de `.env` aparece fuera de `.env` |
+| ¿Está ya publicado? | **Sí**: `github.com/davidBroBa/Pingo-pop`, rama `main`, commit `bf52fa4`, **público** |
+| ¿Hay secretos en lo publicado? | **No.** Ningún valor de `.env` aparece fuera de `.env`, confirmado contra la API de GitHub (404) |
 | ¿Hay datos personales en las capturas? | **No.** Solo catálogo de demostración |
 | ¿Las migraciones se publican? | **Sí**, y deben: son necesarias para desplegar |
-| ¿Qué hacer antes del primer `push`? | Repasar `git status --short` fichero a fichero y tener `npm run check` en verde |
-| ¿Hay que reescribir historial? | No hace falta: no existe historial |
+| ¿Qué hacer antes de cada commit? | Barrido de secretos + `git status --porcelain -uall` + `npm run check` en verde |
+| ¿Hay que reescribir historial? | No hace falta hoy. Si algún día entra un secreto, sí, y hay que coordinarlo |

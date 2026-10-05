@@ -47,10 +47,22 @@ versionado es [SemVer](https://semver.org/lang/es/).
   contienen **catálogo de demostración** (nombres y precios de productos de
   ejemplo). Ni credenciales ni datos de clientes. Añadida la prohibición de
   capturar `/admin/*` o una sesión iniciada.
-- `git init` ejecutado **sin commits, sin `git add` y sin remoto**: sirve para
-  auditar. Lo que entraría en el primer commit son **155 ficheros**, con `.env`,
-  `src/generated/prisma/`, `node_modules/`, `.next/` y las imágenes subidas fuera.
-  **No** se ha hecho commit: eso lo pide el usuario.
+- `git init` y **primer commit `bf52fa4`**, publicado en
+  `github.com/davidBroBa/Pingo-pop` (rama `main`). Entraron **155 ficheros**, con
+  `.env`, `src/generated/prisma/`, `node_modules/`, `.next/` y las imágenes
+  subidas fuera. Comprobado contra la API de GitHub: `.env`, `.env.local`,
+  `docker-compose.override.yml` y los ficheros generados devuelven **404**, y
+  `.env.example`, `README.md`, `CHANGELOG.md`, `docs/PUBLICAR.md`, `docs/DEPLOY.md`
+  y `prisma/schema.prisma` devuelven **200**.
+- El remoto ya tenía una versión antigua del proyecto (rama `main`, commit
+  `691d142`, septiembre 2026) **sin historial en común** con este. Antes de
+  reemplazarla se subió la etiqueta **`backup-691d142`**, que deja aquel commit
+  alcanzable, así el reemplazo quedó siendo reversible. El push fue
+  `+ 691d142...bf52fa4 main -> main (forced update)`, autorizado expresamente.
+- El repositorio es **público**: a partir de aquí nada secreto debe entrar en el
+  historial. Un commit siempre se puede deshacer, pero lo ya subido queda legible
+  para cualquiera. Por eso el barrido de secretos es obligatorio antes de **cada**
+  commit, no solo antes del primero.
 
 ---
 
