@@ -27,7 +27,7 @@ de estilo, no trabajo pendiente.
 - `npm run build` — build de producción
 - `npm run start` — ejecuta build (`next start -p 3000`)
 - `npm run lint` — ESLint
-- `npm run test` — `node --import tsx --test "tests/**/*.test.ts"` (107 tests, 13 suites)
+- `npm run test` — `node --import tsx --test "tests/**/*.test.ts"` (151 tests, 20 suites)
 - `npm run validate` — valida `src/data/*.json` (no usado actualmente)
 - `npm run typecheck` — `tsc --noEmit`
 - `npm run check` — typecheck + lint + test + build (ideal antes de subir)
@@ -36,12 +36,14 @@ de estilo, no trabajo pendiente.
 - `src/app/` — App Router de Next.js 16
 - `src/app/api/` — rutas API (Zod en borde, 401/403 por rol, rate limit donde aplica)
 - `src/components/` — componentes co-ubicados con su `.css`
-- `src/lib/` — lógica reutilizable: `auth/`, `prisma.ts`, `env.ts`, `validation.ts`, `quote-schema.ts`, `quote-cart-storage.ts`, `upload-validation.ts`, `rate-limit.ts`, `prisma-error.ts`
-- `src/lib/auth/` — `password.ts` (argon2id), `session-token.ts` (HMAC-SHA256, base64url), `require-admin.ts` (guard servidor), `session.ts` (lectura de cookie)
-- `src/middleware.ts` — protección de `/admin/:path*`
+- `src/lib/` — lógica reutilizable: `auth/`, `prisma.ts`, `env.ts`, `validation.ts`, `quote-schema.ts`, `quote-cart-storage.ts`, `account-schema.ts`, `upload-validation.ts`, `rate-limit.ts`, `prisma-error.ts`
+- `src/lib/auth/` — `password.ts` (argon2id), `session-token.ts` (HMAC-SHA256, base64url, `sv`), `require-admin.ts` (guard servidor, **revoca**), `session.ts` (lectura de cookie, con y sin revocación)
+- `src/middleware.ts` — protección de `/admin/:path*` y `/perfil`. Solo exige ADMIN en `/admin/*`; corre en **Edge**, así que **no puede revocar sesiones** (no hay Prisma): la revocación la hace `requireAdmin()` y `getSessionUser()`
+- `src/app/perfil/` — página de perfil y su vista cliente. Solo `name`; el `email` no se edita
+- `src/app/api/account/` — `password` (revoca todas las sesiones) y `profile`
 - `src/generated/prisma/` — cliente Prisma generado (no editar)
 - `prisma/` — schema, migraciones, `seed.ts`
-- `tests/` — 13 suites con `node:test` + `tsx` (sin dependencias nuevas, **sin jsdom**: la lógica comprobable va en módulos puros de `src/lib/`, nunca dentro de un componente)
+- `tests/` — 20 suites con `node:test` + `tsx` (sin dependencias nuevas, **sin jsdom**: la lógica comprobable va en módulos puros de `src/lib/`, nunca dentro de un componente)
 - `public/uploads/products/` — imágenes subidas por admin (nombres aleatorios, `.gitkeep` versionado)
 
 ## Principios innegociables
@@ -51,14 +53,19 @@ de estilo, no trabajo pendiente.
 - **Capturas: nada de `/admin/*` ni de sesión iniciada** en un repo público (el panel enseña el catálogo real y cualquier token queda congelado en la imagen). Antes de publicar, revisar `docs/PUBLICAR.md`.
 - **No enumeración de usuarios.** Mismo 401 ante credenciales incorrectas o usuario inexistente. Ver `src/app/api/auth/login/route.ts`.
 - **Defence in depth.** Middleware + `requireAdmin()` en servidor. Nunca confiar solo en UI/middleware.
+- **La revocación de sesiones es real:** `User.sessionVersion` viaja firmado en la cookie como `sv` y se contrasta con la BD. Cambiar la contraseña la incrementa y **cierra todas las sesiones, incluida la del dispositivo que la cambió**. El middleware no puede hacerlo (Edge, sin Prisma): por eso `requireAdmin()` usa `getSessionUser()`, que sí consulta.
 - **Uploads seguros.** Solo JPEG/PNG/WebP. **Magic bytes** obligatorios. Máx 5 MiB. Nombre `randomBytes(16).hex` + extensión válida. Escritura con `flag: "wx"`. Ruta validada con regex estricta.
 - **Entradas validadas con Zod** en el borde. `imagePath` acepta `""`/espacios → `null` (preprocess) para evitar 400 en formularios.
+- **Dos políticas de contraseña por rol:** BUYER 8+ **sin exigir complejidad**; ADMIN 12+ con mayúscula, minúscula, dígito y puntuación. El suelo de 8 **no baja**, porque `LoginSchema` ya rechazaba menos. Viven en `src/lib/account-schema.ts`, que es puro.
 - **Errores Prisma mapeados.** Usar `describePrismaError` → 400/404/409/422 para fallos del cliente, 500 + log para fallos reales.
 - **Cero secretos loggeados.** Nunca imprimir `DATABASE_URL`, hash, tokens o contraseñas.
 - **Test-first cuando se añade lógica crítica.** Tests en `tests/` con `node:test`.
 
 ## Trampas a evitar
 - **`force-dynamic`**: debe ir en el **`page.tsx`**, no en componentes. Rutas `/admin/*` deben ser dinámicas.
+- **`MainLayout` NO puede ser `async` con `cookies()`.** `/contacto` y `/novedades` se prerenderizan como HTML estático, y ahí no hay `cookies()`: el build falla. Para saber si hay sesión, cada página se la pasa como propiedad.
+- **Cambiar el esquema de Prisma obliga a reiniciar el dev server** (si no, `Unknown field`) y `npm run build` hace panic de Turbopack si compila a la vez. Además `migrate dev` necesita `CREATE` y `ALTER` para su *shadow database*.
+- **Tras cambiar el esquema hay que `npx prisma generate`**: el cliente de `src/generated/prisma/` no se actualiza solo.
 - **`server-only`**: no está instalado. No añadirlo. `password.ts` no debe tenerlo (lo importa `prisma/seed.ts`).
 - **Windows vs Linux**: migraciones con mayúsculas/minúsculas. MariaDB en Linux con `lower_case_table_names=0` distingue caso → usar `QuoteRequest` consistentemente.
 - **`JSON.stringify({image: ""})`**: preserva cadena vacía. El esquema debe normalizarla a `undefined`/`null`.
@@ -89,8 +96,11 @@ de estilo, no trabajo pendiente.
 - `docs/GATES.md` — gates, auditoría npm, razones de 8 altas residuales (justificadas)
 - `docs/AI.md` — uso responsable de IA: qué se delega en el modelo y qué no
 - `specs/001-pingo-rework/`, `specs/002-cartoon-visual/` — **cerradas**, spec/plan/tasks con estado real. Referencia de estilo
-- `specs/003-quote-cart-persistence/` — **cerrada pero sin commitear ni desplegar**. Persistencia del carrito con validación Zod de lo guardado en `localStorage`. Referencia de estilo del patrón "módulo puro + tests sin DOM"
-- `src/lib/auth/session-token.ts` — firma/verificación HMAC
+- `specs/003-quote-cart-persistence/` — **cerrada y commiteada**. Persistencia del carrito con validación Zod de lo guardado en `localStorage`. Referencia de estilo del patrón "módulo puro + tests sin DOM"
+- `specs/006-user-profile/` — **implementada, sin commitear**. Perfil, cambio de contraseña con revocación de sesiones y dos políticas por rol
+- `src/lib/auth/session-token.ts` — firma/verificación HMAC + `sv` (versión de sesión) e `isSessionCurrent`
+- `src/lib/auth/session.ts` — **`getSession()` no consulta la BD; `getSessionUser()` sí y revoca.** Elegir mal es un agujero o un coste innecesario
+- `src/lib/account-schema.ts` — políticas de contraseña por rol (BUYER 8+, ADMIN 12+ con símbolos) y esquemas de cuenta. Puro, sin DOM
 - `src/lib/upload-validation.ts` — validación segura de subida
 - `src/lib/prisma-error.ts` — mapeo de errores Prisma
 - `src/context/QuoteCartContext.tsx` — carrito de cotización. **La carga va en un `useEffect` de montaje, nunca en el inicializador de `useState`**: leer `localStorage` ahí hace que el servidor y el cliente pinten ramas distintas y React tire la hidratación (spec 003, T9). El efecto de escritura va protegido por `cargado`

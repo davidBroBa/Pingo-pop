@@ -22,6 +22,21 @@ versionado es [SemVer](https://semver.org/lang/es/).
 
 ### Arreglado
 
+- **Cambiar la contraseña ahora cierra todas las sesiones, y se puede hacer.** Antes
+  no había forma de cambiar la contraseña, y aunque la hubiera habido no habría servido
+  de nada: la cookie de sesión solo llevaba `{userId, role, iat, exp}`, sin ningún
+  identificador ni versión, así que **toda cookie firmada seguía siendo válida hasta 8
+  horas** (`SESSION_TTL_MS`) por mucho que se cambiara la contraseña.
+- **Existe una página de perfil** (`/perfil`). El campo `name` estaba en el modelo
+  `User` desde la spec 001 y no se usaba en ningún sitio: ni se leía, ni se escribía,
+  ni se mostraba.
+- **Cualquier usuario puede cerrar sesión, no solo los administradores.** El botón
+  estaba únicamente dentro del panel de administración, así que un `BUYER` tenía que
+  borrar las cookies a mano.
+- **Bajar el rol de un administrador le corta el acceso.** El rol se relee de la base de
+  datos en lugar de fiarse del que dice la cookie, que seguía diciendo `ADMIN` hasta que
+  caducaba.
+
 - **El carrito de cotización ahora sobrevive a una recarga y a un cierre del
   navegador** (spec `003-quote-cart-persistence`). Antes se leía de `localStorage`
   al arrancar pero **ningún camino de código escribía la clave**: la lectura era
@@ -65,6 +80,21 @@ versionado es [SemVer](https://semver.org/lang/es/).
 - `docs/THREATS.md` gana la sección **A5** sobre el carrito guardado en el
   navegador, con la conclusión de que manipular el carrito tiene **impacto nulo**:
   el servidor solo acepta `productId` y `quantity` y los revalida.
+- **Dos políticas de contraseña, según el rol.** Un `BUYER` necesita 8 caracteres o
+  más, sin exigir mayúsculas, minúsculas, dígitos ni signos de puntuación: obligar a
+  un cliente que quiere un pin de 8 dígitos a inventar una mayúscula y un símbolo no
+  aporta seguridad. Un `ADMIN` sí necesita 12
+  caracteres con mayúscula, minúscula, dígito y un signo de puntuación.
+  El suelo común de 8 no baja porque `LoginSchema` ya rechazaba menos.
+- `src/lib/account-schema.ts`: módulo **puro** (sin DOM, sin base de datos) con las dos
+  políticas y los esquemas de cuenta. Vive aparte del componente por la misma razón que
+  `quote-cart-storage.ts`: el runner es `node:test` **sin jsdom**, así que lo comprobable
+  tiene que poder vivir fuera de React.
+- `/perfil` muestra, **solo para ADMIN**, un bloque con datos que un usuario normal no
+  ve: id interno, rol, fecha de alta, última modificación y los datos de la sesión
+  actual. El hash de la contraseña no sale nunca en el `select`.
+- `tests/account-schema.test.ts` (33 casos) y `tests/session-revocation.test.ts`
+  (6 casos), y 5 casos nuevos en `tests/session-token.test.ts`.
 
 ### Cambiado
 

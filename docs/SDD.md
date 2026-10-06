@@ -34,7 +34,7 @@ Ver `prisma/schema.prisma`. Entidades:
 - **Cliente**: el carrito de cotización vive en `localStorage` (`pingo-quote-cart`) y se hidrata en `QuoteCartProvider`. Como el navegador controla ese contenido, se valida con esquema Zod en `src/lib/quote-cart-storage.ts` y se descarta entero ante cualquier fallo; los límites coinciden con los del servidor (cantidad 1–10000, 50 productos)
 
 ## 6. Seguridad
-- Middleware (`src/middleware.ts`) protege `/admin/:path*` → redirige `/login` si sin sesión válida
+- Middleware (`src/middleware.ts`) protege `/admin/:path*` y `/perfil` → redirige `/login` si sin sesión válida. Solo exige ADMIN en `/admin/*`; `/perfil` es de cualquier usuario con sesión
 - `requireAdmin()` revalida firma + rol → 401/403
 - Login: comparación con `argon2.verify`; mismo 401 ante fallo
 - Sesión: TTL 8h, firma del payload completo
@@ -50,14 +50,38 @@ Ver `prisma/schema.prisma`. Entidades:
 3. POST `/api/products` con `{ ..., image: url }` validado por `imagePath` → Prisma crea producto
 4. GET `/uploads/products/<hex32>.<ext>` sirve archivo estático
 
+**Cambio de contraseña (revocación):**
+1. `POST /api/account/password` con actual + nueva + confirmación, con sesión vigente
+2. Se verifica la actual contra el hash; 401 genérico si falla (no enumera cuentas)
+3. Se comprueba la política **del rol**: BUYER 8+ sin complejidad, ADMIN 12+ con
+   mayúscula, minúscula, dígito y puntuación
+4. Un solo `update`: `passwordHash` nuevo **y** `sessionVersion: { increment: 1 }`, para
+   que no puedan quedar separados
+5. Se borra la cookie (`maxAge: 0`) y se avisa de que hay que entrar de nuevo
+
+Como `sv` viaja dentro de la cookie firmada, **toda cookie emitida antes queda en una
+versión anterior y deja de valer** en cuanto se compara con la base de datos. Cierran
+también las demás sesiones abiertas, no solo la del dispositivo que hace el cambio.
+
+**Dos formas de leer la sesión, y no son intercambiables:**
+
+| Función | Consulta la BD | Para qué |
+|---|---|---|
+| `getSession()` | No | Decidir qué enlace mostrar; validar firma y caducidad |
+| `getSessionUser()` | **Sí** | Cualquier decisión de seguridad: revoca y relee el rol |
+
+El **middleware corre en Edge y no tiene Prisma**, así que nunca revoca: solo comprueba
+firma. Por eso una cookie revocada todavía puede renderizar el *shell* de `/admin`, y el
+`401`/`403` llega al pedir datos. Es un límite conocido, no un descuido.
+
 ## 8. IA / Automatización
 **Uso de IA:** asistente para refactor, tests, documentación y correcciones. Decisiones de seguridad validadas con tests. No se delegó la firma HMAC ni la validación de subida a prompts no verificados. Todo cambio crítico con tests primero.
 
 ## 9. Testing
 - `node:test` + `tsx`
-- Suites: `session-token` (firma/verificación/expiración/tamper), `rate-limit` (memoria, ventana), `upload-validation` (magic bytes, whitelist, tamaño), `validation` (Zod + control chars + image ""), `prisma-error` (mapeo códigos), `quote-cart-storage` (carrito guardado: corrupto, enorme, fuera de límites)
-- **Sin jsdom**: la lógica comprobable se extrae a módulos puros de `src/lib/` sin acceso al DOM. Por eso `quote-cart-storage.ts` existe separado del contexto de React, que solo se limita a hidratar y a un efecto de escritura
-- 107/107 passing
+- Suites: `session-token` (firma/verificación/expiración/tamper/**versión de sesión**), `session-revocation` (matriz de vigencia), `rate-limit` (memoria, ventana), `upload-validation` (magic bytes, whitelist, tamaño), `validation` (Zod + control chars + image ""), `prisma-error` (mapeo códigos), `quote-cart-storage` (carrito guardado), `account-schema` (**las dos políticas de contraseña** + esquemas de cuenta)
+- **Sin jsdom**: la lógica comprobable se extrae a módulos puros de `src/lib/` sin acceso al DOM. Por eso existen `quote-cart-storage.ts` y `account-schema.ts` separados de los componentes de React, que solo hidratan y coordinan
+- 151/151 passing
 
 ## 10. Despliegue
 - Build con `npm run build` (requiere `DATABASE_URL`, `SESSION_SECRET`)
@@ -69,7 +93,7 @@ Ver `prisma/schema.prisma`. Entidades:
 ## 11. Riesgos y mitigaciones
 | Riesgo | Mitigación |
 |---|---|
-| Falsificación de sesión | HMAC-SHA256 + verificación estricta |
+| Falsificación de sesión | HMAC-SHA256 + verificación estricta + `sv` contrastado con la BD |
 | Path traversal en upload | Nombre aleatorio + regex de ruta + escritura `wx` |
 | Enumeración usuarios | Respuesta idéntica + `DUMMY_HASH` |
 | FK inexistente → 500 | `describePrismaError` (P2003→422) |

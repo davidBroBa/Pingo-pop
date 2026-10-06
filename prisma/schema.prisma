@@ -20,6 +20,11 @@ model User {
   name         String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  // Se incrementa cada vez que se cambia la contrasena. Viaja dentro de la cookie
+  // firmada como `sv` y se compara contra este valor al pedir datos, de modo que
+  // cambiar la contrasena deja invalidas todas las sesiones (spec 006).
+  sessionVersion Int @default(0)
 }
 
 model Category {

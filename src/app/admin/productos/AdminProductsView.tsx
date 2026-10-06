@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 type Category = {
@@ -304,15 +305,24 @@ export default function AdminProductsView({
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              void handleLogout();
-            }}
-            className="cartoon-border cartoon-shadow-sm cartoon-hover cartoon-focus h-10 shrink-0 rounded-xl bg-white px-5 text-sm font-semibold"
-          >
-            Cerrar sesión
-          </button>
+          <div className="flex shrink-0 gap-3">
+            <Link
+              href="/perfil"
+              className="cartoon-border cartoon-shadow-sm cartoon-hover cartoon-focus inline-flex h-10 items-center rounded-xl bg-white px-5 text-sm font-semibold"
+            >
+              Mi perfil
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => {
+                void handleLogout();
+              }}
+              className="cartoon-border cartoon-shadow-sm cartoon-hover cartoon-focus h-10 shrink-0 rounded-xl bg-white px-5 text-sm font-semibold"
+            >
+              Cerrar sesión
+            </button>
+          </div>
         </div>
 
         <form

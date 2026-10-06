@@ -24,12 +24,17 @@ export async function middleware(
     target.searchParams.set("next", request.nextUrl.pathname);
     return NextResponse.redirect(target);
   }
-  if (session.role !== "ADMIN") {
+
+  // `/perfil` es de cualquier usuario con sesion; solo `/admin/*` exige ADMIN. Sin
+  // esta distincion, un BUYER que abriera su perfil caeria en un redirect a `/`.
+  const esAdmin = request.nextUrl.pathname.startsWith("/admin");
+  if (esAdmin && session.role !== "ADMIN") {
     return NextResponse.redirect(new URL("/", request.url));
   }
+
   return null;
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/perfil"],
 };

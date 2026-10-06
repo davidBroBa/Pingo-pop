@@ -56,11 +56,23 @@ export async function POST(request: Request): Promise<NextResponse> {
   // desde el manejador de Next. Ademas delifica: un 500 distingue "la base de
   // datos no esta" de un 401, lo que rompe la garantia de no filtrar si la
   // cuenta existe. 503 dice "vuelve a intentarlo", que es lo cierto.
-  let user: { id: number; passwordHash: string; role: "BUYER" | "ADMIN" } | null;
+  let user: {
+    id: number;
+    passwordHash: string;
+    role: "BUYER" | "ADMIN";
+    sessionVersion: number;
+  } | null;
   try {
     user = await prisma.user.findUnique({
       where: { email },
-      select: { id: true, passwordHash: true, role: true },
+      // `sessionVersion` viaja en la cookie firmada: es lo que permite revocar todas
+      // las sesiones al cambiar la contrasena (spec 006).
+      select: {
+        id: true,
+        passwordHash: true,
+        role: true,
+        sessionVersion: true,
+      },
     });
   } catch (error) {
     console.error("POST /api/auth/login: no se pudo leer el usuario:", error);
@@ -81,7 +93,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Credenciales invalidas" }, { status: 401 });
   }
 
-  const token = await signSession(buildSessionPayload(user.id, user.role));
+  const token = await signSession(
+    buildSessionPayload(user.id, user.role, user.sessionVersion),
+  );
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE.name, token, {
     httpOnly: SESSION_COOKIE.httpOnly,

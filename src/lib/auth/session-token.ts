@@ -13,11 +13,46 @@ export type SessionPayload = {
   userId: number;
   /** Rol con el que se emitio la sesion. */
   role: "BUYER" | "ADMIN";
+  /** Version de sesion del usuario al emitirla. */
+  sv: number;
   /** Instante de emision, en milisegundos epoch. */
   iat: number;
   /** Instante de expiracion, en milisegundos epoch. */
   exp: number;
 };
+
+/**
+ * Decide si una sesion sigue vigente frente a la version guardada en la base de datos.
+ *
+ * Es **pura a proposito**: la revocacion necesita la BD, pero la decision de si una
+ * sesion continua vigente no. Separarlas permite comprobar la matriz entera con
+ * `node:test`, sin base de datos ni navegador.
+ *
+ * Cuando se cambia la contrasena se incrementa `sessionVersion` del usuario, con lo
+ * que toda cookie emitida antes queda en una version anterior y deja de valer. Asi
+ * el cambio de contrasena cierra tambien las demas sesiones abiertas.
+ *
+ * @param sessionVersion - Version que viajaba en la cookie.
+ * @param userVersion - `sessionVersion` actual del usuario en la base de datos.
+ * @returns `true` solo si coinciden exactamente.
+ */
+export function isSessionCurrent(
+  sessionVersion: number,
+  userVersion: number,
+): boolean {
+  // Una version negativa o no entera no puede ser real: se rechaza en vez de
+  // confiar. `verifySession` ya lo filtra, pero esta es la ultima linea de defensa.
+  if (
+    !Number.isInteger(sessionVersion) ||
+    !Number.isInteger(userVersion) ||
+    sessionVersion < 0 ||
+    userVersion < 0
+  ) {
+    return false;
+  }
+
+  return sessionVersion === userVersion;
+}
 
 /**
  * Devuelve la clave de firma desde el entorno.
@@ -162,9 +197,27 @@ export async function verifySession(token: string | undefined): Promise<SessionP
   if (typeof candidate.exp !== "number" || candidate.exp <= Date.now()) {
     return null;
   }
+  // `sv` ausente se trata como version 0 a proposito: las cookies emitidas antes de
+  // que existiera esta columna no deben expulsar a nadie en el despliegue. Un `sv`
+  // presente pero no entero (un ataque con firma ajena o un dato corrupto) si se
+  // rechaza: no hay ningun caso legitimo en el que ocurra.
+  let sv: number;
+  if (candidate.sv === undefined) {
+    sv = 0;
+  } else if (
+    typeof candidate.sv !== "number" ||
+    !Number.isInteger(candidate.sv) ||
+    candidate.sv < 0
+  ) {
+    return null;
+  } else {
+    sv = candidate.sv;
+  }
+
   return {
     userId: candidate.userId,
     role: candidate.role,
+    sv,
     iat: typeof candidate.iat === "number" ? candidate.iat : 0,
     exp: candidate.exp,
   };
@@ -187,12 +240,22 @@ export const SESSION_COOKIE = {
  *
  * @param userId - Id del usuario autenticado.
  * @param role - Rol efectivo del usuario.
+ * @param sessionVersion - `sessionVersion` del usuario, para poder revocar todas sus
+ *   sesiones al cambiar la contrasena. Obligatorio a proposito: omitirlo en algun
+ *   sitio emitiria una sesion que no se podria revocar nunca.
  * @returns Payload listo para firmar.
  */
 export function buildSessionPayload(
   userId: number,
   role: "BUYER" | "ADMIN",
+  sessionVersion: number,
 ): SessionPayload {
   const now = Date.now();
-  return { userId, role, iat: now, exp: now + SESSION_TTL_MS };
+  return {
+    userId,
+    role,
+    sv: sessionVersion,
+    iat: now,
+    exp: now + SESSION_TTL_MS,
+  };
 }

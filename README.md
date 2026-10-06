@@ -35,7 +35,7 @@ Repositorio: [`github.com/davidBroBa/Pingo-pop`](https://github.com/davidBroBa/P
 | Base de datos | MariaDB 11 / MySQL 8 | Docker en local, servicio propio en el servidor |
 | Zod | 4.6.5 | Validación en el borde de toda entrada externa |
 | argon2 | 0.45.1 | Hash de contraseñas (argon2id) |
-| Tests | `node:test` + `tsx` 4.23 | 13 suites, 107 pruebas, **sin framework adicional** |
+| Tests | `node:test` + `tsx` 4.23 | 20 suites, 151 pruebas, **sin framework adicional** |
 
 Node: **20.9 o superior** (lo exige Next 16). `package.json` no declara `engines`, así
 que npm no te avisará si usas una versión antigua: compruébalo tú (`node -v`).
@@ -114,7 +114,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 | `npm run start` | Ejecuta el build (`next start -p 3000`) |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npm test` | `node --import tsx --test "tests/**/*.test.ts"` - 107 pruebas, 13 suites |
+| `npm test` | `node --import tsx --test "tests/**/*.test.ts"` - 151 pruebas, 20 suites |
 | `npm run check` | **typecheck + lint + test + build**. Es el gate: úsalo antes de entregar |
 | `npm run db:seed` | Crea el ADMIN inicial (argon2id) |
 | `node scripts/check-control-chars.mjs <fichero>` | Detecta bytes de control que rompen el parseo de TypeScript |
@@ -125,7 +125,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 npm run check      # typecheck && lint && test && build
 ```
 
-Estado actual (2026-10-05): **typecheck OK, lint OK, 107/107 tests, build OK (15
+Estado actual (2026-10-05): **typecheck OK, lint OK, 151/151 tests, build OK (16
 rutas)**. `npm audit` deja **8 vulnerabilidades altas residuales, todas en
 herramientas de desarrollo** (`eslint-config-next → fast-glob → micromatch →
 braces`, sin parche disponible) y **no llegan a runtime**. El detalle está en
@@ -153,12 +153,12 @@ src/
     sections/     Hero, Categories, FeaturedProducts, HowItWorks, CTA, formularios
   context/        QuoteCartContext (carrito de cotización)
   lib/            auth/, prisma.ts, env.ts, validation.ts, rate-limit.ts, ...
-  middleware.ts   Redirige /admin/* a /login
+  middleware.ts   Redirige /admin/* y /perfil a /login (solo valida firma: corre en Edge)
   generated/prisma/  Cliente Prisma GENERADO — no editar (ignorado por git)
 prisma/
   schema.prisma, migrations/  Las migraciones SÍ se versionan
   seed.ts, make-buyer.ts
-tests/            13 suites con node:test (sin jsdom)
+tests/            20 suites con node:test (sin jsdom)
 docs/             SDD, THREATS, DESIGN, GATES, DEPLOY, PUBLICAR, constitution
 specs/            001-pingo-rework, 002-cartoon-visual (spec, plan, tasks)
 ```
@@ -172,8 +172,11 @@ specs/            001-pingo-rework, 002-cartoon-visual (spec, plan, tasks)
 | `/`, `/products`, `/products/[slug]` | Público | Catálogo |
 | `/cotizacion` | Público | Formulario de cotización y carrito |
 | `/contacto`, `/novedades`, `/login` | Público | |
+| `/perfil` | Con sesión | Nombre, cambio de contraseña, cierre de sesión. Bloque extra para ADMIN |
 | `/admin/productos`, `/admin/categorias` | **ADMIN** | Middleware **y** `requireAdmin()` |
 | `POST /api/auth/login`, `/api/auth/logout` | Público | Rate limit 10/15 min |
+| `POST /api/account/password` | Con sesión | **Revoca todas las sesiones.** Rate limit 5/15 min |
+| `PATCH /api/account/profile` | Con sesión | Solo `name`; el esquema es `strict()` |
 | `POST /api/quotes` | Público | Rate limit 5/15 min |
 | `GET /api/products`, `/api/categories` | Público | Solo lectura |
 | `POST /api/admin/upload` | **ADMIN** | Magic bytes, 5 MiB, nombre aleatorio |
@@ -274,6 +277,14 @@ Cosas que **no** funcionan y conviene saber antes de prometer nada:
   `CreateQuoteSchema` rechaza la cadena vacía como email inválido. **Bug
   preexistente, encontrado al verificar la spec 003, sin arreglar.** Quien quiera
   pedir una cotización sin escribir su correo recibe un error.
+- **Una sesión revocada todavía puede pintar la estructura del panel.** Al cambiar la
+  contraseña se invalidan todas las sesiones (spec 006), pero el middleware corre en
+  **Edge** y no puede consultar la base de datos, así que solo comprueba la firma. El
+  `401`/`403` llega al pedir datos, no al abrir la página. Concederle algo antes de ese
+  punto sería el agujero; cerrarlo del todo exigiría mover el middleware a Node.
+- **La contraseña del administrador se cambia a mano en `.env`.** El panel no la cambia,
+  y el perfil obliga a 12 caracteres con símbolos, así que una contraseña local de 8 no
+  se puede cambiar por la interfaz sin subirla antes a 12 (spec 006, D4).
 - **Rate limit en memoria**: no reparte entre varias instancias (horizontal
   scaling). Aceptable en single-node, no en réplicas.
 - **Las imágenes huérfanas no se limpian**: un producto borrado deja su fichero en

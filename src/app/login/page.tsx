@@ -27,22 +27,29 @@ export const metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string | string[] }>;
+  searchParams: Promise<{ next?: string | string[]; contrasena?: string | string[] }>;
 }) {
   // Quien ya tiene sesion no deberia ver el formulario.
   const session = await getSession();
   if (session !== null) {
-    redirect(session.role === "ADMIN" ? "/admin/productos" : "/");
+    redirect(session.role === "ADMIN" ? "/admin/productos" : "/perfil");
   }
 
   const params = await searchParams;
   const raw = params.next;
   // Solo se acepta una ruta interna: una absoluta o un `//host` permitiria
-  // redirigir al usuario a otro sitio tras identificarse.
+  // redirigir al usuario a otro sitio tras identificarse. `/perfil` se acepta
+  // ademas porque el perfil lo usa cualquier usuario con sesion, no solo ADMIN.
   const next =
-    typeof raw === "string" && raw.startsWith("/admin") && !raw.startsWith("//")
+    typeof raw === "string" &&
+    !raw.startsWith("//") &&
+    (raw.startsWith("/admin") || raw === "/perfil")
       ? raw
       : null;
+
+  // Aviso de que la contrasena se acaba de cambiar: el cambio revoca todas las
+  // sesiones, asi que el usuario aterriza aqui y merece saber por que.
+  const contrasenaCambiada = params.contrasena === "cambiada";
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-cartoon-cream px-6 py-16">
@@ -58,6 +65,12 @@ export default async function LoginPage({
             Accede al panel para administrar el catálogo.
           </p>
         </div>
+
+        {contrasenaCambiada ? (
+          <p className="cartoon-border cartoon-shadow-sm mb-6 rounded-2xl bg-cartoon-mint px-4 py-3 text-sm font-medium text-primary">
+            Contrasena cambiada. Entra de nuevo con la nueva.
+          </p>
+        ) : null}
 
         <LoginForm next={next} />
 

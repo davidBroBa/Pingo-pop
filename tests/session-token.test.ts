@@ -15,7 +15,7 @@ process.env.SESSION_SECRET = "secreto-de-prueba-de-32-caracteres-minimo!!";
 
 /** Token de administrador valido, reutilizado por varias pruebas. */
 async function adminToken(): Promise<string> {
-  return signSession(buildSessionPayload(1, "ADMIN"));
+  return signSession(buildSessionPayload(1, "ADMIN", 0));
 }
 
 describe("firma de sesion", () => {
@@ -87,6 +87,7 @@ describe("firma de sesion", () => {
     const expired = await signSession({
       userId: 7,
       role: "BUYER",
+      sv: 0,
       iat: Date.now() - 10_000,
       exp: Date.now() - 1,
     });
@@ -99,6 +100,7 @@ describe("firma de sesion", () => {
     const bogus = await signSession({
       userId: 1,
       role: "ROOT" as "BUYER",
+      sv: 0,
       iat: Date.now(),
       exp: Date.now() + 60_000,
     });
@@ -109,6 +111,7 @@ describe("firma de sesion", () => {
     const forged = await signSession({
       userId: 1.5,
       role: "ADMIN",
+      sv: 0,
       iat: Date.now(),
       exp: Date.now() + 60_000,
     });
@@ -119,7 +122,9 @@ describe("firma de sesion", () => {
     const original = process.env.SESSION_SECRET;
     delete process.env.SESSION_SECRET;
     try {
-      await assert.rejects(() => signSession(buildSessionPayload(1, "ADMIN")));
+      await assert.rejects(() =>
+        signSession(buildSessionPayload(1, "ADMIN", 0)),
+      );
     } finally {
       process.env.SESSION_SECRET = original;
     }
@@ -129,7 +134,9 @@ describe("firma de sesion", () => {
     const original = process.env.SESSION_SECRET;
     process.env.SESSION_SECRET = "corto";
     try {
-      await assert.rejects(() => signSession(buildSessionPayload(1, "ADMIN")));
+      await assert.rejects(() =>
+        signSession(buildSessionPayload(1, "ADMIN", 0)),
+      );
     } finally {
       process.env.SESSION_SECRET = original;
     }
@@ -147,5 +154,66 @@ describe("firma de sesion", () => {
     } finally {
       process.env.SESSION_SECRET = original;
     }
+  });
+});
+
+/**
+ * `sv` (spec 006) es lo que permite revocar sesiones al cambiar la contrasena.
+ * Se anade en un bloque aparte para no mezclarlo con los casos de firma.
+ */
+describe("version de sesion (sv)", () => {
+  it("viaja en el payload tal cual se le pasa", async () => {
+    const token = await signSession(buildSessionPayload(3, "BUYER", 4));
+    const session = await verifySession(token);
+    assert.ok(session !== null);
+    assert.equal(session.sv, 4);
+  });
+
+  it("una cookie emitida sin `sv` se valida como version 0", async () => {
+    // Caso del despliegue: las cookies anteriores a la columna no deben expulsar a
+    // nadie. Se firma un payload sin el campo a proposito.
+    const token = await signSession({
+      userId: 3,
+      role: "BUYER",
+      iat: Date.now(),
+      exp: Date.now() + 60_000,
+    } as unknown as Parameters<typeof signSession>[0]);
+
+    const session = await verifySession(token);
+    assert.ok(session !== null);
+    assert.equal(session.sv, 0);
+  });
+
+  it("rechaza un `sv` que no es entero", async () => {
+    const token = await signSession({
+      userId: 3,
+      role: "BUYER",
+      sv: 1.5,
+      iat: Date.now(),
+      exp: Date.now() + 60_000,
+    } as unknown as Parameters<typeof signSession>[0]);
+    assert.equal(await verifySession(token), null);
+  });
+
+  it("rechaza un `sv` negativo", async () => {
+    const token = await signSession({
+      userId: 3,
+      role: "BUYER",
+      sv: -1,
+      iat: Date.now(),
+      exp: Date.now() + 60_000,
+    } as unknown as Parameters<typeof signSession>[0]);
+    assert.equal(await verifySession(token), null);
+  });
+
+  it("rechaza un `sv` que es texto", async () => {
+    const token = await signSession({
+      userId: 3,
+      role: "BUYER",
+      sv: "dos",
+      iat: Date.now(),
+      exp: Date.now() + 60_000,
+    } as unknown as Parameters<typeof signSession>[0]);
+    assert.equal(await verifySession(token), null);
   });
 });

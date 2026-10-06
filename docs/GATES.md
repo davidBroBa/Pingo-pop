@@ -5,8 +5,8 @@
 |---|---|---|---|
 | Typecheck | `npx tsc --noEmit` | **OK** | Sin errores |
 | Lint | `npm run lint` | **OK** | ESLint, sin errores/avisos relevantes |
-| Tests | `npm test` | **OK** | 82/82 passing (10 suites) |
-| Build | `npm run build` | **OK** | 15 rutas, todas dinámicas donde corresponde |
+| Tests | `npm test` | **OK** | 151/151 passing (20 suites) |
+| Build | `npm run build` | **OK** | 16 rutas, todas dinámicas donde corresponde |
 | Auditoría | `npm audit` | **PARCIAL** | 8 high severity (residuales, justificadas) |
 
 ## 2. Auditoría npm
