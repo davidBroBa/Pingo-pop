@@ -27,6 +27,30 @@ model User {
   sessionVersion Int @default(0)
 }
 
+/**
+ * Ajustes del sitio. **Una sola fila**, no una tabla de configuraciones libre.
+ *
+ * El `id` fijo a 1 no se elige por comodidad: hace imposible el error clasico
+ * de estas tablas, que es crear una fila nueva cada vez que se guarda algo y
+ * acabar leyendo un valor al azar. Si la fila no existe, `writeHeroImage()`
+ * la crea con `upsert` y no hay paso de siembra que se pueda saltar.
+ *
+ * Cuando haga falta guardar mas cosas del sitio (un banner, un telefono, un
+ * texto de pie) se **anaden columnas aqui**, no filas: el motivo de que sea
+ * singleton se pierde en cuanto se llena.
+ */
+model SiteSettings {
+  id Int @id @default(1)
+
+  // Ruta de la foto del hero, dentro de `/uploads/site/`. Valida `siteImagePath`
+  // en `src/lib/validation.ts`, no `imagePath`: el hero no es un producto y no
+  // puede apuntar a la carpeta del catalogo.
+  heroImage String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Category {
   id          Int      @id @default(autoincrement())
   name        String

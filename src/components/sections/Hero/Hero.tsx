@@ -37,7 +37,18 @@ function Squiggle({ className }: { className?: string }) {
   );
 }
 
-export function Hero() {
+export interface HeroProps {
+  /**
+   * Ruta de la foto del hero, o `null` si el administrador no ha subido ninguna.
+   *
+   * Cuando es `null` se pinta el texto `Pingo`, que es la **reserva** y no un
+   * adorno: la web tiene que verse bien con la base de datos vacia, con la foto
+   * sin subir o si la base de datos se cae al leerla.
+   */
+  image?: string | null;
+}
+
+export function Hero({ image = null }: HeroProps) {
   return (
     <section className="relative overflow-hidden bg-cartoon-cream">
       {/* Formas decorativas flotantes */}
@@ -87,10 +98,24 @@ export function Hero() {
         </div>
 
         <div className="relative flex min-h-[420px] items-center justify-center">
-          <div className="cartoon-border-thick cartoon-shadow-lg relative flex h-[360px] w-full max-w-[480px] rotate-2 items-center justify-center rounded-[32px] bg-white">
-            <span className="font-heading text-6xl font-bold text-primary">
-              Pingo
-            </span>
+          <div className="cartoon-border-thick cartoon-shadow-lg relative flex h-[360px] w-full max-w-[480px] rotate-2 items-center justify-center overflow-hidden rounded-[32px] bg-white">
+            {image !== null && image !== "" ? (
+              /*
+                Decorativa: el texto del titular ya dice de que va la pagina, asi
+                que un `alt` aqui seria ruido para quien lee con lector de
+                pantalla. Por eso va vacio a proposito (RF-35).
+              */
+              // eslint-disable-next-line @next/next/no-img-element -- subida ya validada con magic bytes y ruta servida por la propia app
+              <img
+                src={image}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <span className="font-heading text-6xl font-bold text-primary">
+                Pingo
+              </span>
+            )}
             <Star className="absolute -right-5 -top-5 h-14 w-14 rotate-12 text-accent" />
             <div className="cartoon-border cartoon-shadow-sm absolute -bottom-4 -left-4 rotate-[-4deg] rounded-full bg-cartoon-mint px-4 py-2">
               <span className="text-sm font-semibold text-primary">

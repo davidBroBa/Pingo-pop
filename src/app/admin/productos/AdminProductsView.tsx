@@ -4,6 +4,8 @@ import { FormEvent, useCallback, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import AdminNavLinks from "@/app/admin/AdminNavLinks";
+
 type Category = {
   id: number;
   name: string;
@@ -292,6 +294,8 @@ export default function AdminProductsView({
   return (
     <main className="min-h-screen bg-cartoon-cream px-6 py-16">
       <div className="mx-auto max-w-6xl">
+        <AdminNavLinks />
+
         <div className="mb-10 flex items-start justify-between gap-6">
           <div>
             <p className="cartoon-border cartoon-shadow-sm mb-4 inline-block rotate-[-1deg] rounded-full bg-white px-3 py-1 text-sm font-semibold uppercase tracking-[0.15em] text-primary">

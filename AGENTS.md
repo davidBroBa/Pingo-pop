@@ -27,7 +27,7 @@ de estilo, no trabajo pendiente.
 - `npm run build` — build de producción
 - `npm run start` — ejecuta build (`next start -p 3000`)
 - `npm run lint` — ESLint
-- `npm run test` — `node --import tsx --test "tests/**/*.test.ts"` (151 tests, 20 suites)
+- `npm run test` — `node --import tsx --test "tests/**/*.test.ts"` (190 tests, 26 suites)
 - `npm run validate` — valida `src/data/*.json` (no usado actualmente)
 - `npm run typecheck` — `tsc --noEmit`
 - `npm run check` — typecheck + lint + test + build (ideal antes de subir)
@@ -43,8 +43,13 @@ de estilo, no trabajo pendiente.
 - `src/app/api/account/` — `password` (revoca todas las sesiones) y `profile`
 - `src/generated/prisma/` — cliente Prisma generado (no editar)
 - `prisma/` — schema, migraciones, `seed.ts`
-- `tests/` — 20 suites con `node:test` + `tsx` (sin dependencias nuevas, **sin jsdom**: la lógica comprobable va en módulos puros de `src/lib/`, nunca dentro de un componente)
-- `public/uploads/products/` — imágenes subidas por admin (nombres aleatorios, `.gitkeep` versionado)
+- `tests/` — 26 suites con `node:test` + `tsx` (sin dependencias nuevas, **sin jsdom**: la lógica comprobable va en módulos puros de `src/lib/`, nunca dentro de un componente)
+- `public/uploads/products/` — imágenes de **productos y categorías** (nombres aleatorios, `.gitkeep` versionado)
+- `public/uploads/site/` — imágenes de **ajustes del sitio** (la foto del hero). Carpeta aparte porque su validación también lo es: `imagePath` para productos, `siteImagePath` para el hero. Un destino no puede usar la ruta del otro
+- `src/app/admin/apariencia/` — panel de la foto del hero (`PATCH /api/admin/site`)
+- `src/lib/site-settings.ts` — la fila **única** de `SiteSettings` (`SINGLETON_ID = 1`). `readHeroImage()` es **tolerante a fallos**: si la BD cae devuelve `null` y sale el `Pingo`, porque un ajuste del sitio no puede dejar la web sin pintar
+- `src/lib/category-card-props.ts` — número y color de las tarjetas de la portada, **derivados y no guardados**, más el recorte a 4. Puro y testeado
+- `src/app/admin/AdminNavLinks.tsx` — enlaces entre las tres páginas de administración. Antes **`/admin/categorias` no tenía ni un enlace entrante** y solo se abría escribiendo la URL
 
 ## Principios innegociables
 - **Paleta: núcleo preservado + extensión cartoon (spec 002).** El **núcleo original** se mantiene como ancla de marca: `#F7B92C` (accent), `#2A2227` (ink), `#707070` (muted), `#ECECEC` (border), `#FAFAFA` (card), `#fcfcfc`, `#ffffff`. Desde la spec `002-cartoon-visual` se **amplía** con colores de apoyo cartoon (rosa, cielo, menta, lavanda, coral, crema) documentados en `docs/DESIGN.md`, que es la **única fuente de verdad** de la paleta. Prohibido inventar hex fuera de `docs/DESIGN.md`; prohibido alterar los hex del núcleo.
@@ -55,7 +60,11 @@ de estilo, no trabajo pendiente.
 - **Defence in depth.** Middleware + `requireAdmin()` en servidor. Nunca confiar solo en UI/middleware.
 - **La revocación de sesiones es real:** `User.sessionVersion` viaja firmado en la cookie como `sv` y se contrasta con la BD. Cambiar la contraseña la incrementa y **cierra todas las sesiones, incluida la del dispositivo que la cambió**. El middleware no puede hacerlo (Edge, sin Prisma): por eso `requireAdmin()` usa `getSessionUser()`, que sí consulta.
 - **Uploads seguros.** Solo JPEG/PNG/WebP. **Magic bytes** obligatorios. Máx 5 MiB. Nombre `randomBytes(16).hex` + extensión válida. Escritura con `flag: "wx"`. Ruta validada con regex estricta.
+- **Un solo endpoint de subida, con destino.** `POST /api/admin/upload` lee `target` del `FormData` y lo contrasta contra `UPLOAD_TARGETS`, un registro **congelado**. `products` por defecto, así que los formularios de producto no cambian ni una línea. Se eligió un parámetro y no un endpoint por carpeta para que la frontera de seguridad (quién sube, qué se acepta, cómo se nombra) quede **en un solo sitio**.
+- **`SiteSettings` es una fila, no una tabla de configuraciones.** `id` fijo a `1` y `upsert`: es lo que impide el error de crear una fila nueva en cada guardado y acabar leyendo un valor al azar. Cuando haga falta más de un ajuste se **añaden columnas**, no filas.
+- **El recorte a 4 tarjetas de la portada es una decisión del usuario (D11), no un descuido.** Pero su consecuencia real es peor de lo que parece: como el orden es alfabético, **una categoría nueva puede desplazar a otra que ya estaba** y sacarla de la portada. La 5.ª se sigue editando y admite foto; solo no se ve.
 - **Entradas validadas con Zod** en el borde. `imagePath` acepta `""`/espacios → `null` (preprocess) para evitar 400 en formularios.
+- **Toda vista de producto pinta `product.image`.** Las cuatro vistas públicas (catálogo, destacados de la home, ficha y carrito) usan `image !== null && image !== ""` y, si no hay foto, el `<span>Pingo</span>` de reserva: 5 de 6 productos no tienen imagen. Con `<img>` y `eslint-disable-next-line @next/next/no-img-element` **en una sola línea** y el motivo escrito. Una vista que acepta el campo y no lo lee repite el bug que tenía el catálogo entero.
 - **Dos políticas de contraseña por rol:** BUYER 8+ **sin exigir complejidad**; ADMIN 12+ con mayúscula, minúscula, dígito y puntuación. El suelo de 8 **no baja**, porque `LoginSchema` ya rechazaba menos. Viven en `src/lib/account-schema.ts`, que es puro.
 - **Errores Prisma mapeados.** Usar `describePrismaError` → 400/404/409/422 para fallos del cliente, 500 + log para fallos reales.
 - **Cero secretos loggeados.** Nunca imprimir `DATABASE_URL`, hash, tokens o contraseñas.

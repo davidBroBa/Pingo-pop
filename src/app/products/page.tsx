@@ -57,10 +57,19 @@ export default async function ProductsPage() {
               href={`/products/${product.slug}`}
               className="cartoon-border cartoon-shadow cartoon-hover cartoon-focus group overflow-hidden rounded-[24px] bg-white"
             >
-              <div className="flex h-64 items-center justify-center border-b-2 border-primary bg-cartoon-cream">
-                <span className="font-heading text-4xl font-bold text-primary/20 transition-transform duration-200 group-hover:-rotate-3 group-hover:scale-110">
-                  Pingo
-                </span>
+              <div className="relative flex h-64 items-center justify-center overflow-hidden border-b-2 border-primary bg-cartoon-cream">
+                {product.image !== null && product.image !== "" ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- subida ya validada con magic bytes y ruta servida por la propia app
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                  />
+                ) : (
+                  <span className="font-heading text-4xl font-bold text-primary/20 transition-transform duration-200 group-hover:-rotate-3 group-hover:scale-110">
+                    Pingo
+                  </span>
+                )}
               </div>
 
               <div className="space-y-3 p-6">

@@ -130,10 +130,19 @@ export default function CotizacionPage() {
                   className="cartoon-border cartoon-shadow flex flex-col gap-5 rounded-3xl bg-card p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"
                 >
                   <div className="flex items-center gap-5">
-                    <div className="cartoon-border cartoon-shadow-sm flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-white">
-                      <span className="font-heading text-xl font-bold text-primary/20">
-                        Pingo
-                      </span>
+                    <div className="cartoon-border cartoon-shadow-sm relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white">
+                      {item.image !== null && item.image !== "" ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- subida ya validada con magic bytes y ruta servida por la propia app
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="font-heading text-xl font-bold text-primary/20">
+                          Pingo
+                        </span>
+                      )}
                     </div>
 
                     <div>

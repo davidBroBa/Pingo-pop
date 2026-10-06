@@ -111,7 +111,7 @@ for r in / /products /cotizacion /contacto /novedades /login; do
   printf "%-14s %s\n" "$r" "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000$r)"
 done
 # las de admin deben redirigir (307) sin sesión
-for r in /admin/productos /admin/categorias; do
+for r in /admin/productos /admin/categorias /admin/apariencia; do
   printf "%-20s %s\n" "$r" "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000$r)"
 done
 ```

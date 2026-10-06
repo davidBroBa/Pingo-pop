@@ -65,6 +65,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         name: input.name,
         slug,
         description: input.description ?? null,
+        image: input.image ?? null,
       },
     });
     return NextResponse.json(category, { status: 201 });

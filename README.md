@@ -35,7 +35,7 @@ Repositorio: [`github.com/davidBroBa/Pingo-pop`](https://github.com/davidBroBa/P
 | Base de datos | MariaDB 11 / MySQL 8 | Docker en local, servicio propio en el servidor |
 | Zod | 4.6.5 | Validación en el borde de toda entrada externa |
 | argon2 | 0.45.1 | Hash de contraseñas (argon2id) |
-| Tests | `node:test` + `tsx` 4.23 | 20 suites, 151 pruebas, **sin framework adicional** |
+| Tests | `node:test` + `tsx` 4.23 | 26 suites, 190 pruebas, **sin framework adicional** |
 
 Node: **20.9 o superior** (lo exige Next 16). `package.json` no declara `engines`, así
 que npm no te avisará si usas una versión antigua: compruébalo tú (`node -v`).
@@ -114,7 +114,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 | `npm run start` | Ejecuta el build (`next start -p 3000`) |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npm test` | `node --import tsx --test "tests/**/*.test.ts"` - 151 pruebas, 20 suites |
+| `npm test` | `node --import tsx --test "tests/**/*.test.ts"` - 190 pruebas, 26 suites |
 | `npm run check` | **typecheck + lint + test + build**. Es el gate: úsalo antes de entregar |
 | `npm run db:seed` | Crea el ADMIN inicial (argon2id) |
 | `node scripts/check-control-chars.mjs <fichero>` | Detecta bytes de control que rompen el parseo de TypeScript |
@@ -125,7 +125,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 npm run check      # typecheck && lint && test && build
 ```
 
-Estado actual (2026-10-05): **typecheck OK, lint OK, 151/151 tests, build OK (16
+Estado actual (2026-10-05): **typecheck OK, lint OK, 190/190 tests, build OK (22
 rutas)**. `npm audit` deja **8 vulnerabilidades altas residuales, todas en
 herramientas de desarrollo** (`eslint-config-next → fast-glob → micromatch →
 braces`, sin parche disponible) y **no llegan a runtime**. El detalle está en
@@ -158,7 +158,7 @@ src/
 prisma/
   schema.prisma, migrations/  Las migraciones SÍ se versionan
   seed.ts, make-buyer.ts
-tests/            20 suites con node:test (sin jsdom)
+tests/            26 suites con node:test (sin jsdom)
 docs/             SDD, THREATS, DESIGN, GATES, DEPLOY, PUBLICAR, constitution
 specs/            001-pingo-rework, 002-cartoon-visual (spec, plan, tasks)
 ```

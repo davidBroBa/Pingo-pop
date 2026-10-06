@@ -23,7 +23,7 @@ nadie ha hecho todavía un `git add -A` y una auditoría de lo que saldría.
 | `/node_modules`, `/.next/`, `/build`, `/out/` | Dependencias y artefactos de build |
 | `*.tsbuildinfo`, `next-env.d.ts` | Cache de TypeScript (y el fichero que regenera Next) |
 | `/src/generated/prisma` | Cliente Prisma generado (se regenera con `npx prisma generate`) |
-| `/public/uploads/products/*` + `!.gitkeep` | **Imágenes subidas por los administradores** |
+| `/public/uploads/products/*` + `!.gitkeep` | **Imágenes de productos y categorías subidas por los administradores** |
 | `/docker-compose.override.yml` | Override local de Windows (puerto 3307); no debe viajar |
 | `/.agents`, `/.claude`, `/.windsurf`, `/.opencode` | Configuración de agentes locales |
 | `*.tgz`, `*.tar.gz`, `*.pid`, `*.log` | Artefactos de despliegue |
@@ -229,6 +229,7 @@ permanente**.
 | `.env` | Secretos de la instalación (incluye los del servidor) |
 | `src/generated/prisma/` | Se regenera: `npx prisma generate` |
 | `public/uploads/products/*` | Datos de clientes subidos por los administradores |
+| `public/uploads/site/*` | Datos de clientes subidos por los administradores (foto del hero) |
 | `docker-compose.override.yml` | Específico de la máquina de desarrollo |
 | La IP del servidor y su usuario | No hacen falta para trabajar con el proyecto; se acceden por el alias `srv` |
 | Historial de la versión antigua | Reemplazado por el proyecto completo. Sigue accesible en la etiqueta `backup-691d142` |

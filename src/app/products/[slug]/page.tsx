@@ -64,10 +64,19 @@ export default async function ProductPage({
         </Link>
 
         <div className="grid gap-12 lg:grid-cols-2">
-          <div className="cartoon-border-thick cartoon-shadow-lg flex min-h-[500px] rotate-1 items-center justify-center rounded-3xl bg-white">
-            <span className="font-heading text-6xl font-bold text-primary/15">
-              Pingo
-            </span>
+          <div className="cartoon-border-thick cartoon-shadow-lg relative flex min-h-[500px] rotate-1 items-center justify-center overflow-hidden rounded-3xl bg-white">
+            {product.image !== null && product.image !== "" ? (
+              // eslint-disable-next-line @next/next/no-img-element -- subida ya validada con magic bytes y ruta servida por la propia app
+              <img
+                src={product.image}
+                alt={product.name}
+                className="h-full max-h-[640px] w-full object-contain"
+              />
+            ) : (
+              <span className="font-heading text-6xl font-bold text-primary/15">
+                Pingo
+              </span>
+            )}
           </div>
 
           <div className="flex flex-col justify-center">

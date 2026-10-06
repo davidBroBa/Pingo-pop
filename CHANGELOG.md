@@ -37,6 +37,18 @@ versionado es [SemVer](https://semver.org/lang/es/).
   datos en lugar de fiarse del que dice la cookie, que seguía diciendo `ADMIN` hasta que
   caducaba.
 
+- **Las imágenes de producto se ven en el sitio público.** Una imagen subida desde
+  el panel se guardaba, se servía y se pintaba en `/admin/productos`, pero **ninguna de
+  las cuatro vistas públicas la mostraba**: el catálogo (`/products`), los destacados de
+  la portada, la ficha de producto (`/products/[slug]`) y los ítems del carrito de
+  cotización (`/cotizacion`) tenían escrito un `<span>Pingo</span>` de relleno y nunca
+  leían el campo `image`. El fallo no estaba en la subida, en la base de datos ni en la
+  API: la ruta `/uploads/products/...` ya respondía `200 image/jpeg` y el campo `image`
+  llegaba correcto al cliente; simplemente nadie lo renderizaba.
+- **El `Pingo` de relleno se queda como reserva**, no se elimina: cinco de los seis
+  productos del catálogo no tienen imagen, y quitarlo las habría dejado un hueco vacío.
+  La comprobación es la misma que ya usaba el panel, `image !== null && image !== ""`,
+  porque el esquema de validación normaliza la cadena vacía a `null`.
 - **El carrito de cotización ahora sobrevive a una recarga y a un cierre del
   navegador** (spec `003-quote-cart-persistence`). Antes se leía de `localStorage`
   al arrancar pero **ningún camino de código escribía la clave**: la lectura era
@@ -70,6 +82,44 @@ versionado es [SemVer](https://semver.org/lang/es/).
 
 ### Añadido
 
+- **El administrador puede subir la foto del hero** (spec `008-site-and-category-images`).
+  Estaba escrito a mano en el componente (`Hero.tsx`), sin ninguna prop: la foto
+  **no existía como concepto** en el proyecto, porque `schema.prisma` no tenía
+  dónde guardarla. Ahora hay un modelo `SiteSettings` de **una sola fila** (`id`
+  fijo a 1) y una página nueva, `/admin/apariencia`. El `Pingo` se queda como
+  **reserva**: si no hay foto, o si la base de datos se cae al leerla, la portada
+  se sigue viendo bien. Un ajuste del sitio no puede dejar la web sin pintar.
+- **El administrador puede subir una foto por categoría**, y **editar** las
+  categorías. Antes `/api/categories` solo tenía `GET` y `POST`: **una categoría
+  creada no se podía volver a tocar jamás**. El campo `Category.image` existía en
+  la base de datos desde la spec 001 y no lo usaba absolutamente nadie. Ahora hay
+  listado con edición en línea, y `PATCH /api/categories/[id]`.
+- **Las categorías de la portada salen de la base de datos.** El componente las
+  tenía escritas a mano en un array literal, así que aunque se subiera una foto no
+  se vería en ningún sitio. Ahora es data-driven, y conserva el texto actual como
+  **reserva** si no hay ninguna categoría: la portada nunca se ve rota por un
+  problema de datos.
+- **`/admin/categorias` ya se puede abrir.** No tenía **ni un enlace entrante**: el
+  navbar no enlaza a ninguna ruta de administración, así que esa pantalla solo se
+  alcanzaba escribiendo la URL a mano. Una página a la que no se puede llegar no
+  existe para quien tiene que usarla. Las tres páginas de administración ahora
+  comparten navegación.
+- **Un único endpoint de subida con destino.** `POST /api/admin/upload` acepta un
+  campo `target` que se contrasta contra un registro congelado de dos destinos.
+  Se prefirió un parámetro a un endpoint por carpeta para que la frontera de
+  seguridad (quién sube, qué se acepta, cómo se nombra el fichero) quede en un
+  solo sitio, y para que los formularios de producto no cambien ni una línea.
+- `src/lib/site-settings.ts`: `readHeroImage()` (tolerante a fallos) y
+  `writeHeroImage()` por `upsert` sobre `id = 1`. **No hay paso de siembra**, que
+  era justo el paso que se podía olvidar.
+- `src/lib/category-card-props.ts`: número y color de las tarjetas **derivados, no
+  guardados**, más el recorte a 4. Puro y con 19 pruebas.
+- `src/app/admin/AdminNavLinks.tsx` y `src/components/ui/ImagePicker/`.
+- `siteImagePath` en `src/lib/validation.ts`: esquema **aparte** de `imagePath`,
+  con su propia regex. Acepta la cadena vacía igual que el otro, y un test
+  comprueba que los dos se comportan idéntico en la ausencia.
+- `UpdateCategorySchema`, **sin `slug`**: es la URL pública y cambiarla dejaría
+  enlaces muertos sin avisar.
 - `src/lib/quote-cart-storage.ts`: esquema, `parseStoredCart`, `serializeCart` y la
   clave. **Va sin DOM a propósito**, porque el runner de tests (`node:test`) no tiene
   jsdom: la lógica comprobable tiene que poder vivir fuera del componente de React.

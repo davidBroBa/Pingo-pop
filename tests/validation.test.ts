@@ -6,6 +6,7 @@ import {
   CreateCategorySchema,
   CreateProductSchema,
   DeleteProductSchema,
+  UpdateCategorySchema,
   UpdateProductSchema,
   slugify,
 } from "../src/lib/validation";
@@ -192,6 +193,92 @@ describe("esquema de categoria", () => {
   it("rechaza un slug con separadores repetidos", () => {
     assert.equal(
       CreateCategorySchema.safeParse({ name: "Textil", slug: "a--b" }).success,
+      false,
+    );
+  });
+
+  it("acepta la imagen con la forma que genera la subida de producto", () => {
+    const image = "/uploads/products/0123456789abcdef0123456789abcdef.jpg";
+    const r = CreateCategorySchema.safeParse({ name: "Textil", image });
+    assert.equal(r.success, true);
+    assert.equal(r.success && r.data.image, image);
+  });
+
+  it("hace opcional la imagen: sin ella tambien se da de alta", () => {
+    const r = CreateCategorySchema.safeParse({ name: "Textil" });
+    assert.equal(r.success, true);
+    assert.equal(r.success && r.data.image, undefined);
+  });
+
+  it("normaliza imagen vacia y espacios a ausencia, igual que en productos", () => {
+    for (const image of ["", "   "]) {
+      const r = CreateCategorySchema.safeParse({ name: "Textil", image });
+      assert.equal(r.success, true, `deberia aceptar: ${JSON.stringify(image)}`);
+      assert.equal(r.success && r.data.image, undefined);
+    }
+  });
+
+  it("rechaza en la imagen el traversal, una URL externa y rutas ajenas", () => {
+    for (const image of [
+      "/uploads/products/../../evil.js",
+      "https://example.com/foto.jpg",
+      "/uploads/site/0123456789abcdef0123456789abcdef.jpg",
+      "/imagenes/logo.png",
+    ]) {
+      assert.equal(
+        CreateCategorySchema.safeParse({ name: "Textil", image }).success,
+        false,
+        `deberia rechazar: ${image}`,
+      );
+    }
+  });
+});
+
+describe("actualizacion de categoria", () => {
+  const base = { id: 3, name: "Textil", description: "Algodon" };
+
+  it("acepta id, nombre, descripcion e imagen", () => {
+    const image = "/uploads/products/0123456789abcdef0123456789abcdef.jpg";
+    const r = UpdateCategorySchema.safeParse({ ...base, image });
+    assert.equal(r.success, true);
+    assert.equal(r.success && r.data.id, 3);
+    assert.equal(r.success && r.data.image, image);
+  });
+
+  it("acepta quitar la imagen mandando la cadena vacia", () => {
+    const r = UpdateCategorySchema.safeParse({ ...base, image: "" });
+    assert.equal(r.success, true);
+    assert.equal(r.success && r.data.image, undefined);
+  });
+
+  it("exige id entero positivo", () => {
+    for (const id of [0, -1, 1.5, "abc", undefined, null]) {
+      assert.equal(
+        UpdateCategorySchema.safeParse({ ...base, id }).success,
+        false,
+        `deberia rechazar id: ${String(id)}`,
+      );
+    }
+  });
+
+  it("NO tiene campo slug: el slug es la URL publica y no se edita", () => {
+    // Si el cliente lo manda, Zod lo descarta. Lo que importa es que el dato que
+    // sale del esquema no lo lleve: asi la ruta no puede reescribir el slug.
+    const r = UpdateCategorySchema.safeParse({ ...base, slug: "otro-slug" });
+    assert.equal(r.success, true);
+    assert.equal(
+      r.success && "slug" in r.data,
+      false,
+      "el slug no debe llegar a la salida del esquema",
+    );
+  });
+
+  it("sigue rechazando traversal en la imagen", () => {
+    assert.equal(
+      UpdateCategorySchema.safeParse({
+        ...base,
+        image: "/uploads/products/../../evil.js",
+      }).success,
       false,
     );
   });

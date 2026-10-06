@@ -1,4 +1,4 @@
-﻿# Modelo de Amenazas - Pingo POP
+# Modelo de Amenazas - Pingo POP
 
 > STRIDE + amenazas IA/LLM. Proyecto: Next.js 16.3.8 + TypeScript + Prisma 7 + MariaDB/MySQL.
 > Fecha: 2026-10-03. Estado: tras el rework de roles, autenticacion y subida de imagenes.
@@ -17,7 +17,7 @@
 | A1 | Usuarios y roles (email, hash, rol) | Identidad | Critica | `User` en MariaDB |
 | A2 | Productos y categorias | Datos | Alta | `Product`, `Category` |
 | A3 | Cotizaciones (nombre, email, telefono) | Datos/PII | Alta | `QuoteRequest` |
-| A4 | Imagenes subidas | Archivos | Media | `public/uploads/products/` |
+| A4 | Imagenes subidas | Archivos | Media | `public/uploads/products/` (productos y categorías) y `public/uploads/site/` (ajustes del sitio) |
 | A5 | Sesiones | Credencial | Critica | Cookie `pp_session`, firmada con HMAC |
 | A6 | Secretos (`SESSION_SECRET`, `DATABASE_URL`) | Credencial | Critica | `.env`, fuera del repositorio |
 
@@ -30,9 +30,18 @@
 | E3 | `GET /api/categories` | Publico | No | Filtros del catalogo |
 | E4 | `POST /api/categories` | Admin | Si, rol ADMIN | `requireAdmin()` |
 | E5 | `POST /api/quotes` | Publico | No | Rate limit + Zod |
-| E6 | `POST /api/admin/upload` | Admin | Si, rol ADMIN | `requireAdmin()` |
+| E6 | `POST /api/admin/upload` | Admin | Si, rol ADMIN | `requireAdmin()` + `target` contra `UPLOAD_TARGETS` |
 | E7 | `POST /api/auth/login` | Publico | No | Rate limit + argon2 |
 | E8 | `/admin/*` | Admin | Si, rol ADMIN | Middleware + comprobacion en pagina |
+| E9 | `PATCH /api/categories/[id]` | Admin | Si, rol ADMIN | `requireAdmin()` + `UpdateCategorySchema` (sin `slug`) + 409 si el nombre choca |
+| E10 | `PATCH /api/admin/site` | Admin | Si, rol ADMIN | `requireAdmin()` + `siteImagePath` |
+
+**E6, ampliada tras la spec 008.** El endpoint acepta un campo `target` que decide
+la carpeta de destino. No es una ruta de fichero: se contrasta contra las claves de
+`UPLOAD_TARGETS`, un registro **congelado** con dos literales, y un valor
+desconocido es **400**. Aun asi, un `target` equivocado solo puede escribir en
+`uploads/site/` en vez de `uploads/products/`, nunca fuera de `public/uploads/`,
+y el nombre del fichero lo genera el servidor.
 
 ## 4. Amenazas STRIDE por activo
 
@@ -70,7 +79,10 @@ Redis o a la base de datos es trabajo pendiente, no un detalle menor.
 | T | Content-Type fraudulento (HTML como `.jpg`) | Critica | Alta | Se comparan los magic bytes con el tipo declarado | Bajo |
 | T | Path traversal en el nombre | Critica | Alta | El nombre original se descarta; se genera con `randomBytes(16)` | Bajo |
 | T | Sobrescribir un archivo existente | Media | Baja | `writeFile` con `flag: "wx"` | Bajo |
-| I | Servir un archivo fuera de la carpeta | Critica | Baja | Nombre generado, sin separadores; esquema restringe a `/uploads/products/<32 hex>.<ext>` | Bajo |
+| I | Servir un archivo fuera de la carpeta | Critica | Baja | Nombre generado, sin separadores; los esquemas restringen a `/uploads/products/<32 hex>.<ext>` y `/uploads/site/<32 hex>.<ext>` | Bajo |
+| T | Apuntar el hero a un fichero del catálogo, o al revés | Media | Baja | `imagePath` y `siteImagePath` son esquemas **aparte**: cada uno acepta solo su carpeta | Bajo |
+| T | Escribir en una carpeta arbitraria con `target` | Media | Baja | `target` se contrasta contra `UPLOAD_TARGETS` (congelado, dos claves); un valor desconocido es 400 | Bajo |
+| E | Hacer que un ajuste del sitio rompa la portada | Alta | Baja | `readHeroImage()` es tolerante a fallos: si la BD cae devuelve `null` y sale el `Pingo` de reserva | Bajo |
 | D | Subir un archivo enorme | Alta | Media | Limite de 5 MB antes de leer en memoria | Bajo |
 | E | Colocar codigo ejecutable en el dominio | Critica | Baja | Sin SVG ni HTML: no hay documento activo | Bajo |
 

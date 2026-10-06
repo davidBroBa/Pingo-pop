@@ -56,6 +56,33 @@ export const imagePath = z.preprocess(
     .nullish(),
 );
 
+/**
+ * Ruta de imagen de **ajustes del sitio**, guardada en `public/uploads/site/`.
+ *
+ * Es un esquema **aparte**, no una extension de `imagePath`, y el motivo es que
+ * los dosueten documentos distintos: el hero y las categorias de la portada no
+ * son productos. Aceptar la forma de productos en el hero seria abrir la puerta
+ * a que un ajuste del sitio acabara apuntando a la carpeta del catalogo, y
+ * ensuciar `imagePath` para que las dos formas valieran en todas partes
+ * convertiria cualquiera de los dos esquemas en "cualquier ruta bajo
+ * `/uploads/`", que es justo lo que se quiere evitar.
+ *
+ * El `preprocess` es identico al de `imagePath` y por el mismo motivo: el
+ * formulario envia `""` cuando no hay foto, y eso es "sin foto", no un error.
+ */
+export const siteImagePath = z.preprocess(
+  (valor) =>
+    typeof valor === "string" && valor.trim() === "" ? undefined : valor,
+  z
+    .string({ error: "Se espera una ruta de imagen" })
+    .trim()
+    .max(300)
+    .regex(/^\/uploads\/site\/[a-f0-9]{32}\.(jpg|png|webp)$/, {
+      message: "Ruta de imagen no valida",
+    })
+    .nullish(),
+);
+
 /** Texto largo opcional, con el mismo control de caracteres que el corto. */
 const longText = (max: number) =>
   z
@@ -106,6 +133,21 @@ export const CreateCategorySchema = z.object({
   name: shortText(120),
   slug: slugText.optional(),
   description: longText(2000),
+  image: imagePath,
+});
+
+/**
+ * Edicion de categoria: `id` obligatorio y **sin `slug`**.
+ *
+ * El slug se deja fuera a proposito, no por olvido. Es la URL publica de la
+ * categoria y ya hay productos apuntando a ella: permitir cambiarlo dejaria
+ * URLs muertas sin avisar. Quien quiera corregir un slug equivocado lo hace en
+ * la base de datos, con el coste conscious de rehacer los enlaces.
+ */
+export const UpdateCategorySchema = CreateCategorySchema.omit({
+  slug: true,
+}).extend({
+  id: recordId,
 });
 
 /** Tipo de salida de `CreateProductSchema` tras aplicar el parseo. */
@@ -116,6 +158,9 @@ export type UpdateProductInput = z.infer<typeof UpdateProductSchema>;
 
 /** Tipo de salida de `CreateCategorySchema` tras aplicar el parseo. */
 export type CreateCategoryInput = z.infer<typeof CreateCategorySchema>;
+
+/** Tipo de salida de `UpdateCategorySchema` tras aplicar el parseo. */
+export type UpdateCategoryInput = z.infer<typeof UpdateCategorySchema>;
 
 /**
  * Construye la respuesta de error de validacion.

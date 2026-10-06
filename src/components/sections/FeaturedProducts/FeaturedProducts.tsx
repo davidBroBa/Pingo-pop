@@ -60,10 +60,19 @@ export async function FeaturedProducts() {
               key={product.id}
               className="group overflow-hidden p-0 transition-transform duration-200 hover:rotate-1"
             >
-              <div className="flex h-72 items-center justify-center border-b-2 border-primary bg-cartoon-cream">
-                <span className="font-heading text-4xl font-bold text-primary/20 transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-3">
-                  Pingo
-                </span>
+              <div className="relative flex h-72 items-center justify-center overflow-hidden border-b-2 border-primary bg-cartoon-cream">
+                {product.image !== null && product.image !== "" ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- subida ya validada con magic bytes y ruta servida por la propia app
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-110"
+                  />
+                ) : (
+                  <span className="font-heading text-4xl font-bold text-primary/20 transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-3">
+                    Pingo
+                  </span>
+                )}
               </div>
 
               <div className="space-y-4 p-6">

@@ -40,6 +40,11 @@ yarn-error.log*
 # imagenes subidas por los administradores
 /public/uploads/products/*
 !/public/uploads/products/.gitkeep
+# lo mismo para los ajustes del sitio (foto del hero). Carpeta aparte porque la
+# validacion tambien es aparte: `imagePath` para productos, `siteImagePath` para
+# aqui. Un destino no puede usar la ruta del otro.
+/public/uploads/site/*
+!/public/uploads/site/.gitkeep
 
 # configuracion local de esta maquina (MariaDB en 3307 porque el 3306 esta ocupado).
 # docker compose lo lee solo y NO debe viajar al servidor ni a otras maquinas.
@@ -68,3 +73,7 @@ next-env.d.ts
 /.claude
 /.windsurf
 /.opencode
+# opencode.json declara servidores MCP y sus cabeceras de autenticacion. Es
+# configuracion de esta maquina, no del proyecto: aqui es donde se coloco una
+# API key de Context7 por error y dejo el MCP sin funcionar.
+/opencode.json
