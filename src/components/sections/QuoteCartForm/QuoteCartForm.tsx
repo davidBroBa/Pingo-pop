@@ -110,7 +110,7 @@ export function QuoteCartForm({ onSuccess }: QuoteCartFormProps) {
         required
         minLength={10}
         rows={5}
-        placeholder="Cuéntanos detalles de tu pedido, diseños, colores, medidas o cualquier requisito especial..."
+        placeholder="Cuéntanos qué productos y cantidades necesitas, o cualquier requisito especial..."
         className="cartoon-border cartoon-focus mt-5 w-full resize-none rounded-2xl bg-white px-4 py-3 outline-none"
       />
 

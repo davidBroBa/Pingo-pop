@@ -41,11 +41,12 @@ export default async function ProductsPage() {
           </p>
 
           <h1 className="text-5xl font-bold text-primary">
-            Crea algo que sea tuyo
+            Catálogo
           </h1>
 
           <p className="mt-4 text-lg text-foreground-muted">
-            Catálogo de pines metálicos, réplicas en impresión 3D, acrílicos y otros productos. Los fotobotones son los únicos personalizables.
+            Pines metálicos, llaveros, réplicas en impresión 3D, acrílicos y
+            fotobotones. Pedidos al mayoreo para negocios.
           </p>
         </div>
 

@@ -49,23 +49,23 @@ export function Hero() {
         <div className="max-w-2xl space-y-8">
           <div className="cartoon-border cartoon-shadow-sm inline-flex -rotate-2 rounded-full bg-cartoon-pink px-4 py-2">
             <span className="text-sm font-semibold text-primary">
-              Pones de catálogo, listos para pedir
+              Surtido mayorista
             </span>
           </div>
 
           <Typography variant="h1" className="font-heading text-primary">
-            Tus ideas,
+            Surtimos tu
             <br />
-            hechas{" "}
             <span className="relative inline-block">
-              realidad.
+              negocio.
               <Squiggle className="absolute -bottom-3 left-0 w-full" />
             </span>
           </Typography>
 
           <Typography variant="body-lg" className="max-w-xl text-foreground-muted">
-            Catálogo de pines metálicos, réplicas en impresión 3D, acrílicos y otros productos.
-            Los fotobotones son los únicos personalizables. La impresión 3D por archivo es un caso extra.
+            Pines metálicos, llaveros, réplicas en impresión 3D, acrílicos y
+            fotobotones. Pedidos al mayoreo para negocios, con precio por
+            volumen.
           </Typography>
 
           <div className="flex flex-col gap-4 sm:flex-row">

@@ -82,7 +82,7 @@ export default function CotizacionPage() {
           </span>
 
           <h1 className="mt-4 text-5xl font-bold text-primary">
-            Crea tu pedido
+            Solicitud de cotización
           </h1>
 
           <p className="mt-4 text-lg leading-8 text-foreground-muted">
@@ -217,8 +217,8 @@ export default function CotizacionPage() {
               </div>
 
               <p className="max-w-xs text-right text-sm leading-6 text-foreground-muted">
-                El costo final puede variar según las características y
-                personalización de tu pedido.
+                El costo final puede variar según la cantidad y el producto
+                solicitado.
               </p>
             </div>
 

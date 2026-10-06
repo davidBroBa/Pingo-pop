@@ -70,7 +70,7 @@ async function seedCatalog(prisma: PrismaClient): Promise<void> {
     {
       name: "Pines metálicos",
       slug: "pines-metalicos",
-      description: "Pines personalizados con acabados profesionales.",
+      description: "Pines de catálogo VIP, listos para pedir.",
     },
     {
       name: "Botones fotográficos",
@@ -80,12 +80,13 @@ async function seedCatalog(prisma: PrismaClient): Promise<void> {
     {
       name: "Impresión 3D",
       slug: "impresion-3d",
-      description: "Figuras y piezas personalizadas impresas en 3D.",
+      description:
+        "Réplicas ya hechas, y también figuras creadas desde tu archivo.",
     },
     {
       name: "Llaveros",
       slug: "llaveros",
-      description: "Llaveros personalizados para regalos y proyectos.",
+      description: "Llaveros de catálogo para regalos y proyectos.",
     },
   ];
 
@@ -108,9 +109,9 @@ async function seedCatalog(prisma: PrismaClient): Promise<void> {
 
   const products = [
     {
-      name: "Pin personalizado",
-      slug: "pin-personalizado",
-      description: "Pin metálico personalizado con tu diseño.",
+      name: "Pin VIP",
+      slug: "pin-vip",
+      description: "Pin metálico de catálogo VIP, listo para pedir.",
       price: 35,
       featured: true,
       categoryId: await idOf("pines-metalicos"),
@@ -132,9 +133,9 @@ async function seedCatalog(prisma: PrismaClient): Promise<void> {
       categoryId: await idOf("impresion-3d"),
     },
     {
-      name: "Llavero personalizado",
-      slug: "llavero-personalizado",
-      description: "Llavero personalizado para regalos y proyectos especiales.",
+      name: "Llavero VIP",
+      slug: "llavero-vip",
+      description: "Llavero de catálogo VIP para regalos y proyectos.",
       price: 30,
       featured: false,
       categoryId: await idOf("llaveros"),
@@ -153,9 +154,14 @@ async function seedCatalog(prisma: PrismaClient): Promise<void> {
 /**
  * Crea el administrador inicial, o actualiza el hash del existente.
  *
- * La contrasena se lee de `ADMIN_PASSWORD`. Si no esta definida no se crea
- * ninguna cuenta y el seed lo dice: es preferible un panel inaccesible a un
- * panel abierto con una contrasena inventada por el script.
+ * La contrasena se lee de `ADMIN_PASSWORD`, jamas de este fichero: el
+ * repositorio es publico, asi que una contrasena escrita aqui seria una
+ * credencial de ADMIN publicada para cualquiera que clone.
+ *
+ * El minimo duro es el mismo que impone `LoginSchema` (8 caracteres): por
+ * debajo, la cuenta se crearia sin poder entrar. La politica de 12 caracteres
+ * con mayuscula, minuscula y digito se comprueba y se avisa, pero no bloquea:
+ * es una recomendacion para produccion, y aqui manda el login.
  *
  * @param prisma - Cliente de Prisma.
  * @returns `true` si se dejo un administrador listo para entrar.
@@ -173,9 +179,22 @@ async function seedAdmin(prisma: PrismaClient): Promise<boolean> {
   }
 
   if (!meetsPasswordPolicy(password)) {
-    throw new Error(
-      "ADMIN_PASSWORD no cumple la politica: 12 caracteres minimo, con minuscula, " +
-        "mayuscula y digito.",
+    // El login exige 8 caracteres (`LoginSchema`), asi que por debajo de 8 la
+    // cuenta quedaria creada pero imposible de usar. Por encima de 8, el seed
+    // solo avisa: la politica de 12 caracteres con mayuscula, minuscula y
+    // digito es una recomendacion para produccion, no un requisito del login.
+    if (password.length < 8) {
+      throw new Error(
+        `ADMIN_PASSWORD tiene ${password.length} caracteres y el login exige ` +
+          "8 como minimo: la cuenta quedaria creada pero no se podria entrar. " +
+          "Pon 8 o mas, o sube el minimo de LoginSchema junto con este script.",
+      );
+    }
+
+    console.warn(
+      `AVISO: ADMIN_PASSWORD tiene ${password.length} caracteres y no cumple la ` +
+        "politica de 12 con mayuscula, minuscula y digito. Funciona, pero para " +
+        "produccion usa una mas larga. No la publiques ni la reutilices.",
     );
   }
 

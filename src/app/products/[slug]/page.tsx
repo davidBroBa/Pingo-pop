@@ -11,6 +11,19 @@ type ProductPageProps = {
 };
 
 /**
+ * Categorias cuyos productos **si** se personalizan.
+ *
+ * Regla de negocio: pines y llaveros son de catalogo (piden, no se personalizan);
+ * los fotobotones se hacen con la foto del cliente y la impresion 3D puede
+ * salir del archivo que envie. Cualquier otra categoria nueva se trata como de
+ * catalogo, que es el caso seguro: no promete personalizacion de mas.
+ */
+const CATEGORIAS_PERSONALIZABLES = new Set([
+  "botones-fotograficos",
+  "impresion-3d",
+]);
+
+/**
  * La ficha se lee de la base de datos en cada peticion, no al compilar.
  *
  * El precio y la disponibilidad cambian sin aviso, asi que prerenderizar la
@@ -66,12 +79,17 @@ export default async function ProductPage({
 
             <p className="mt-6 text-lg leading-8 text-foreground-muted">
               {product.description}
-              {product.slug === "fotobotones" || product.slug === "boton-personalizado" ? (
-                <span className="block mt-2 font-medium text-primary">
-                  • Personalizable con tu foto.
-                </span>
-              ) : null}
             </p>
+
+            {/* Etiqueta morada de "Personalizado", no un texto que lo explique:
+                el color ya la distingue y el filtro de categorias de arriba
+                decide cuando aparece. Texto en tinta sobre morado: 5.69:1, pasa
+                el 4.5:1 de texto pequeno. */}
+            {CATEGORIAS_PERSONALIZABLES.has(product.category.slug) ? (
+              <span className="cartoon-border cartoon-shadow-sm mt-4 inline-block rounded-full bg-cartoon-lavender px-3 py-1 text-sm font-semibold text-primary">
+                Personalizado
+              </span>
+            ) : null}
 
             <p className="cartoon-border cartoon-shadow-sm mt-8 w-fit rounded-2xl bg-accent px-4 py-2 text-3xl font-bold text-primary">
               Desde ${price} MXN

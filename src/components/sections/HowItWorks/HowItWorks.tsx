@@ -5,20 +5,21 @@ import { Card, Typography } from "@/components/ui";
 const steps = [
   {
     number: "01",
-    title: "Elige tu producto",
-    description: "Escoge el producto que más se adapte a tu idea o proyecto.",
+    title: "Elige del catálogo",
+    description:
+      "Recorre el catálogo y escoge los productos y cantidades que necesitas.",
   },
   {
     number: "02",
-    title: "Mándanos tu diseño",
+    title: "Solicita cotización",
     description:
-      "Envíanos tu imagen, ilustración o concepto y nosotros nos encargamos del resto.",
+      "Te respondemos con disponibilidad, precio y tiempos de entrega.",
   },
   {
     number: "03",
-    title: "Lo hacemos realidad",
+    title: "Confirmamos el pedido",
     description:
-      "Fabricamos tu producto cuidando cada detalle para que recibas algo especial.",
+      "Aprobamos la orden y preparamos el surtido para entrega.",
   },
 ];
 
@@ -32,11 +33,11 @@ export function HowItWorks() {
           </span>
 
           <Typography variant="h2" className="font-heading text-primary">
-            De una idea a algo real
+            Pedir es sencillo
           </Typography>
 
           <Typography variant="body-lg" className="text-foreground-muted">
-            Así es el proceso.
+            Tres pasos: eliges, cotizas y te surtimos.
           </Typography>
         </div>
 

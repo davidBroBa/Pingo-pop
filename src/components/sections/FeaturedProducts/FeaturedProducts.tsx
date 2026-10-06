@@ -32,16 +32,16 @@ export async function FeaturedProducts() {
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div className="max-w-2xl space-y-4">
             <span className="cartoon-border cartoon-shadow-sm inline-block rotate-[1deg] rounded-full bg-white px-3 py-1 text-sm font-semibold uppercase tracking-[0.15em] text-primary">
-              Productos
+              Catálogo
             </span>
 
             <Typography variant="h2" className="font-heading text-primary">
-              Lo que podemos crear para ti
+              Productos destacados
             </Typography>
 
             <Typography variant="body-lg" className="max-w-xl text-foreground-muted">
-              Descubre algunos de nuestros productos y personalízalos con tu
-              propia idea.
+              Pines, llaveros y réplicas 3D de catálogo, con precio por volumen
+              para pedidos al mayoreo.
             </Typography>
           </div>
 

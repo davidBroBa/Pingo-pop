@@ -20,7 +20,7 @@ export function Footer({ className, ...props }: FooterProps) {
           <Logo width={140} height={48} />
 
           <p className="max-w-xs text-sm text-foreground-muted">
-            Pines, accesorios e impresión 3D personalizados para tus ideas.
+            Pines de catálogo, réplicas 3D, acrílicos y fotobotones.
           </p>
         </div>
 

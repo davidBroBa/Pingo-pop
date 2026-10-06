@@ -18,7 +18,7 @@ const manrope = Manrope({
 export const metadata: Metadata = {
   title: "Pingo POP",
   description:
-    "Productos personalizados, pines, botones, impresión 3D y mucho más.",
+    "Catálogo de pines, fotobotones, réplicas 3D, acrílicos y más.",
 };
 
 /**

@@ -5,20 +5,21 @@ import { Card, Typography } from "@/components/ui";
 const categories = [
   {
     number: "01",
-    title: "Pines metálicos",
+    title: "Pines catálogo VIP",
     description:
-      "Diseños con acabados profesionales para marcas, eventos y colecciones.",
+      "Pines metálicos de catálogo, con acabados profesionales.",
   },
   {
     number: "02",
     title: "Botones fotográficos",
     description:
-      "Personalizables con tu foto.",
+      "Se hacen con tu foto.",
   },
   {
     number: "03",
     title: "Impresión 3D",
-    description: "Réplicas ya hechas, listas para pedir en nuestro catálogo.",
+    description:
+      "Réplicas ya hechas, y también figuras creadas desde tu archivo.",
   },
   {
     number: "04",
