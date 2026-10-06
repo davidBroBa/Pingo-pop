@@ -251,7 +251,36 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
   casilla** → **400** y **cero** filas en `LegalAcceptance`; `localStorage` en `/cotizacion`
   → **solo** `pingo-quote-cart`.
 
-  **NOTA DE VERIFICACIÓN (pendiente).**
+  **NOTA DE VERIFICACIÓN (hecha, y revisada por dos personas).**
+  `npm run check` → **exit 0**: typecheck 0, lint 0, **332 tests / 55 suites / 0 fallos**,
+  build correcto. **27 rutas** (22 de la 008 + 3 de F3 + 2 de F7).
+  **Revisado por el autor de esta nota, con el dev server y `fetch` real:**
+  `PATCH /api/admin/legal` sin sesión → **401**; `POST /api/quotes` sin `idempotencyKey`
+  → **400** y con `""` → **400**; `GET /api/admin/quotes` sin sesión → **401**.
+  Un detalle que conviene saber: `PATCH /api/admin/legal` con `{"rfc":"123"}` **sin
+  sesión** devuelve **401 y no 400**, porque `requireAdmin()` va **antes** del `parse`
+  del cuerpo. Es lo correcto (no se valida nada de quien no está autenticado), pero
+  significa que el **400** solo se puede ver con sesión.
+  **Revisado por el subagente que lo implementó, con sesiones reales:** `PATCH` con
+  BUYER → **403**, cuerpo inválido → **400**, válido → **200** y `SELECT * FROM
+  LegalData` = **1 fila con `id = 1`**; POST repetido con el mismo token → mismo `id`
+  y **una sola fila**; **doble clic real** (dos `submit` en el mismo tick) →
+  **1 fila + 2 aceptaciones**; POST sin marcar la casilla → **400** y **0** filas en
+  `LegalAcceptance`; 2 aceptaciones por solicitud (`TERMINOS` y `PRIVACIDAD`, P6);
+  `localStorage` en `/cotizacion` = **solo** `pingo-quote-cart`.
+  **Bug encontrado y corregido durante esa revisión:** el manejador de carrera
+  discriminaba por `JSON.stringify(error.meta.target)`, y con el adaptador de MariaDB
+  `meta.target` llega `undefined` en el `P2002` del índice único → `TypeError` → el
+  doble clic devolvía **500** en vez de 200 (la fila **no** se duplicaba, pero la
+  respuesta era falsa). Ahora el discriminante es **buscar por el token**: si existe
+  fila con mi token es mi carrera → 200 con esa fila; si no, `describePrismaError` lo
+  traduce a 409. Reverificado.
+  **Decisión de seguridad que conviene no deshacer:** la **versión la pone el
+  servidor**, no el navegador. Importar `legal-versions` desde un componente cliente
+  mete `crypto-browserify` en el navegador (**800 KB medidos**), así que el formulario
+  **no** muestra el número de versión y envía solo `acepta`; `AceptacionSchema` la
+  rellena con `versionDe(...)` y **rechaza con 400** cualquier versión que el cliente
+  declare y no sea la vigente. Es más fuerte como evidencia, no más flojo.
 
 - [ ] **T10** — `src/app/api/admin/quotes/route.ts`: **`GET`** para el panel (listado por
   `createdAt` descendente, con el recuento de las que han pasado los 12 meses, calculado con
@@ -274,7 +303,26 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
   (**las tres, o ninguna**: es R9); **no existe** ninguna ruta pública que liste cotizaciones
   (`grep -rn "export async function GET" src/app/api/quotes/` → solo el `POST` de creación).
 
-  **NOTA DE VERIFICACIÓN (pendiente).**
+  **NOTA DE VERIFICACIÓN (hecha).**
+  `npm run check` → **exit 0** (typecheck 0, lint 0, **332 tests / 0 fallos**, 27 rutas).
+  **Comprobado por el autor de esta nota, por HTTP contra el dev server:**
+  `GET /api/admin/quotes` sin sesión → **401**; `PATCH /api/admin/quotes` sin sesión
+  → **401**; `GET /api/quotes/1` sin sesión → **401**; `DELETE /api/quotes/1` sin
+  sesión → **401**; `GET /api/quotes/abc` (id no numérico) → **401** y **no** 400, que
+  es lo correcto: la autenticación va antes que validar el id, así que **no se
+  enumeran** ids aunque el formato sea inválido.
+  **P4 confirmado:** `GET /api/quotes` → **405**. La ruta pública **solo crea**.
+  **Comprobado por el subagente que lo implementó, con sesiones reales:**
+  `GET /api/admin/quotes` con BUYER → **403**, con ADMIN → **200** con `hoy`, `vencidas`
+  y `_count`; `PATCH` con `status: "inventado"` → **400**, con los **cinco** valores del
+  enum → **200** y el valor **persiste** en la base de datos; `GET /api/quotes/1` con
+  ADMIN → **200**, `999` → **404**, `abc` → **400**; `DELETE` repetido → **404**.
+  **R9 verificado en la base de datos, no mirando la interfaz:** tras el `DELETE`,
+  `QuoteRequest`, `QuoteRequestItem` y `LegalAcceptance` de esa solicitud = **0, 0, 0**.
+  Las tres o ninguna. Y el `SET NULL` **demostrado** por el otro lado: borrando la fila
+  directamente en la base de datos (fuera de la app), sus `LegalAcceptance`
+  **sobrevivieron con `quoteRequestId = null`**, y el borrado directo falló con `P2003`
+  en `QuoteRequestItem` — o sea, la transacción **no** es decorativa.
 
 ---
 
@@ -384,7 +432,36 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
   sigue terminando** (se avisa por log y sale la URL de reserva); `grep -c SITE_URL .env.example`
   → 1; `git check-ignore -v .env` → sigue ignorada; el build **+2** rutas.
 
-  **NOTA DE VERIFICACIÓN (pendiente).**
+  **NOTA DE VERIFICACIÓN (hecha).**
+  `npm run check` → **exit 0** (typecheck 0, lint 0, **332 tests / 0 fallos**).
+  Build con **27 rutas** (22 de la 008 + 3 de F3 + **2** de F7), y **`/novedades`
+  sigue `○` (estática)**, que es lo que demuestra que `MainLayout` no se tocó:
+  `git diff -- src/components/layout/MainLayout/MainLayout.tsx` → **vacío**.
+  `GET /robots.txt` → **200** con `Disallow:` de `/admin`, `/api`, `/perfil`,
+  `/login` **y** `/cotizacion`; `GET /sitemap.xml` → **200**, `Content-Type:
+  application/xml`, **XML válido** con **11 `<loc>`** y **ninguna** ruta privada
+  colada (`/admin`, `/api`, `/perfil`, `/cotizacion`, `/login` → **cero**).
+  `SITE_URL` es la **única** variable nueva y `.env.example` la declara **1 vez**.
+  `git check-ignore -v .env` → `.gitignore:34:.env*	.env` (**sigue ignorada**).
+  `SITE_URL` **no** es `RequiredEnv` (`RequiredEnv = "DATABASE_URL" | "SESSION_SECRET"`),
+  con valor de reserva y aviso por log, así que el build no depende de que exista.
+
+  **Divergencia encontrada entre la spec y el código, y corregida antes de commitear.**
+  El criterio de este enunciado pedía prohibir `/admin`, `/api`, `/perfil` y `/login`.
+  El código prohíbe `/admin`, `/perfil` y **`/cotizacion`**: se había desviado, y sin
+  mirar el `robots.txt` servido la tarea habría parecido cumplida. Corregido a la
+  **unión de las cinco**, con `/cotizacion` conservado porque el carrito del visitante
+  tampoco tiene nada que indexar. `Disallow` no protege el acceso, solo el índice
+  (lo dicen el middleware y `requireAdmin()`), así que **añadir** rutas no cuesta nada.
+  **Lección que queda escrita:** un criterio de "hecho cuando" hay que comprobarlo
+  **contra la salida real**, no contra el código que uno mismo acaba de escribir.
+
+  **Pendiente de este bloque:** `SITE_URL` en el **servidor** sigue siendo
+  `http://localhost:3000`. Los 12 coincidencias del barrido de secretos son esa URL
+  local (más `MARIADB_DATABASE` y `ADMIN_EMAIL`, los dos que `PUBLICAR.md` §2
+  autoriza). **El dominio real no está en ningún fichero**: `.env.example` tiene
+  `https://ejemplo.com`. Hay que poner el dominio de Pingo POP en el servidor antes de
+  desplegar, o el `sitemap` publicará `localhost`.
 
 ---
 
