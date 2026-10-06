@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/auth/require-admin";
 import { QuoteStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { describePrismaError } from "@/lib/prisma-error";
-import { contarAntiguas, MESES_RETENCION } from "@/lib/retention";
+import { contarAntiguas, marcarParaRevision, MESES_RETENCION } from "@/lib/retention";
 import { validationError } from "@/lib/validation";
 
 /**
@@ -81,13 +81,22 @@ export async function GET(): Promise<NextResponse> {
 
     const hoy = new Date();
 
+    // El numero **y la lista** salen de las dos funciones puras de `retention.ts`,
+    // no de un filtro escrito aqui: la regla de "12 meses y solo en estado
+    // terminal" esta en un sitio y con sus tests (RF-23, RF-24).
+    //
+    // Se devuelven las dos cosas porque **RF-22 avisa, y avisar cuantas hay sin
+    // decir cuales es avisar a medias**: el administrador tenia un numero arriba y
+    // luego la lista completa, y de ahi sacar mentalmente cuales eran las
+    // vencidas. `paraRevisar` ademas lleva los meses cumplidos de cada una, que es
+    // lo que el panel pinta en la insignia.
+    const vencidas = contarAntiguas(solicitudes, hoy);
+
     return NextResponse.json({
       hoy: hoy.toISOString(),
       mesesRetencion: MESES_RETENCION,
-      // El numero de vencidas sale de la funcion pura, no de un filtro escrito
-      // aqui: la regla de "12 meses y solo en estado terminal" esta en un sitio
-      // y con sus tests (RF-23, RF-24).
-      vencidas: contarAntiguas(solicitudes, hoy),
+      vencidas,
+      paraRevisar: vencidas === 0 ? [] : marcarParaRevision(solicitudes, hoy),
       solicitudes,
     });
   } catch (error) {
