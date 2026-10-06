@@ -67,8 +67,16 @@ export function Footer({ className, ...props }: FooterProps) {
           panel que abre. Anadirlo antes seria un enlace que no hace nada, que es
           peor que no tenerlo.
         */}
+        {/*
+          La etiqueta es "Enlaces legales del pie" y **no** "Documentos legales"
+          a proposito: cada pagina legal lleva su propia navegacion con
+          `aria-label="Documentos legales"` (lo pide RF-5), y si las dos se
+          llamaran igual habria **dos landmarks con la misma etiqueta** en la misma
+          pantalla. Navegar por landmarks es como se mueve un lector de pantalla, y
+          dos entradas con el mismo nombre solo hacen que una parezca duplicada.
+        */}
         <nav
-          aria-label="Documentos legales"
+          aria-label="Enlaces legales del pie"
           className="mt-4 flex flex-wrap gap-x-6 gap-y-2"
         >
           {LEGAL_LINKS.map((documento) => (
