@@ -15,10 +15,43 @@ type RequiredEnv = "DATABASE_URL" | "SESSION_SECRET";
 /**
  * Longitud minima del secreto de sesion.
  *
- * Un HMAC con clave corta se puede attacking por fuerza bruta offline. 32
+ * Un HMAC con clave corta se puede atacar por fuerza bruta offline. 32
  * caracteres (256 bits) es el minimo razonable para una clave de firma.
  */
 const MIN_SECRET_LENGTH = 32;
+
+/** Puerto de desarrollo, para construir la URL base si no hay `SITE_URL`. */
+const DEV_URL = "http://localhost:3000";
+
+/**
+ * URL publica del sitio, sin barra final.
+ *
+ * **No** es obligatoria: solo la necesitan `robots.txt` y `sitemap.xml`, y
+ * arrancar la tienda entera sin ellos seria peor que publicarlos con una URL
+ * de ejemplo. En desarrollo cae a `localhost:3000`; en produccion, si falta,
+ * cae tambien a `localhost`, que es visible a quien lea el sitemap y **delata
+ * que nadie ha revisado la variable**. Por eso avisa una vez en el log.
+ *
+ * @returns La URL base, siempre sin barra al final.
+ */
+export function getSiteUrl(): string {
+  const raw = process.env.SITE_URL;
+  if (raw === undefined || raw.trim() === "") {
+    if (process.env.NODE_ENV === "production") {
+      console.warn(
+        "SITE_URL no esta definida: robots.txt y sitemap.xml saldran con localhost. Definala en el servidor.",
+      );
+    }
+    return DEV_URL;
+  }
+  const limpio = raw.trim().replace(/\/+$/, "");
+  if (!/^https?:\/\//.test(limpio)) {
+    throw new Error(
+      `SITE_URL debe empezar por http:// o https://, no "${limpio}".`,
+    );
+  }
+  return limpio;
+}
 
 /**
  * Lee una variable de entorno obligatoria.
