@@ -217,7 +217,7 @@ describe("DOCUMENTOS: los siete documentos de RF-5", () => {
       assert.ok(documento !== null);
 
       const conCifra = documento.contenido.filter((seccion) =>
-        /(\d+\s*(dias|horas|meses|anos|minutos|hábiles|habiles)|\b8 horas\b|\b12 meses\b|WCAG\s*2\.2\s*AA|\d+\s*%)/i.test(
+        /(\d+\s*(d[ií]as|horas|meses|a[ñn]os|minutos|h[áa]biles)|\b8 horas\b|\b12 meses\b|WCAG\s*2\.2\s*AA|\d+\s*%)/i.test(
           seccion.cuerpo.join(" "),
         ),
       );
@@ -267,12 +267,12 @@ describe("DOCUMENTOS: los siete documentos de RF-5", () => {
     // de redaccion sin que cambie lo que afirma.
     assert.match(
       terminosYDevoluciones,
-      /no\s+hay\s+pago\s+en\s+linea|no\s+cobra|pasarela\s+de\s+pago/i,
+      /no\s+hay\s+pago\s+en\s+l[ií]nea|no\s+cobra|pasarela\s+de\s+pago/i,
     );
-    assert.match(terminosYDevoluciones, /es\s+una\s+\*\*solicitud|una\s+solicitud\s+de\s+cotizacion/i);
+    assert.match(terminosYDevoluciones, /es\s+una\s+\*\*solicitud|una\s+solicitud\s+de\s+cotizaci[óo]n/i);
     assert.match(
       terminosYDevoluciones,
-      /precio\s+de\s+cat[aa]logo\s+hasta\s+confirmar/i,
+      /precio\s+de\s+cat[áa]logo\s+hasta\s+confirmar/i,
     );
   });
 
@@ -281,7 +281,7 @@ describe("DOCUMENTOS: los siete documentos de RF-5", () => {
 
     assert.match(
       privacidad,
-      /no\s+env[ii]a\w*\s+comunicaciones\s+electr[oo]nicas|no\s+se\s+env[ii]a\w*\s+correo/i,
+      /no\s+env[íi]a\w*\s+comunicaciones\s+electr[óo]nicas|no\s+se\s+env[íi]a\w*\s+correo/i,
     );
   });
 
@@ -299,7 +299,7 @@ describe("DOCUMENTOS: los siete documentos de RF-5", () => {
     const privacidad = lineasDe("aviso-de-privacidad").join(" ");
 
     assert.ok(
-      !/\d+\s*(h|horas|dias)\s*(h[aa]biles)?\s*(o\s+menos)?\s*para\s+responder/i.test(
+      !/\d+\s*(h|horas|d[ií]as)\s*(h[áa]biles)?\s*(o\s+menos)?\s*para\s+responder/i.test(
         privacidad,
       ),
       "el aviso promete un plazo de respuesta",
@@ -347,7 +347,7 @@ describe("DOCUMENTOS: los siete documentos de RF-5", () => {
     const privacidad = lineasDe("aviso-de-privacidad").join(" ");
 
     assert.ok(
-      !/bot[oo]n\s+de\s+borrar\s+mi\s+cuenta|descarga\w*\s+mis\s+datos/i.test(
+      !/bot[oó]n\s+de\s+borrar\s+mi\s+cuenta|descarga\w*\s+mis\s+datos/i.test(
         privacidad,
       ),
       "el aviso ofrece algo que el sistema no tiene",
@@ -357,7 +357,10 @@ describe("DOCUMENTOS: los siete documentos de RF-5", () => {
   it("la politica de envios declara que el envio es solo en Mexico (RF-37)", () => {
     const envios = lineasDe("politica-de-envios").join(" ");
 
-    assert.match(envios, /s[oo]lo\s+en\s+M[ee]xico|entrega\w*\s+en\s+M[ee]xico/i);
+    // Las clases llevan la version acentuada **y** la que no: `[oó]`, `[eé]`.
+    // Con `[ee]` el patron no casaba con "México" y el test solo pasaba porque el
+    // texto todavia estaba sin tildes: era una prueba de ortografia disfrazada.
+    assert.match(envios, /s[oó]lo\s+en\s+M[eé]xico|entrega\w*\s+en\s+M[eé]xico/i);
   });
 
   it("la politica de envios no promete un plazo que el sistema no cumple (RF-11)", () => {
@@ -365,11 +368,11 @@ describe("DOCUMENTOS: los siete documentos de RF-5", () => {
     const terminos = lineasDe("terminos-y-condiciones").join(" ");
 
     assert.ok(
-      !/en\s+\d+\s*d[ii]as\s+hacemos\s+entrega/i.test(envios),
+      !/en\s+\d+\s+d[ií]as\s+hacemos\s+entrega/i.test(envios),
       "la politica promete un plazo de entrega",
     );
     assert.ok(
-      !/\d+\s*(h|horas)\s*(h[aa]biles)?\s*(o\s+menos)?\s*para\s+responder/i.test(
+      !/\d+\s*(h|horas)\s*(h[áa]biles)?\s*(o\s+menos)?\s*para\s+responder/i.test(
         terminos,
       ),
       "los terminos prometen un plazo de respuesta",
@@ -508,13 +511,13 @@ describe("Lo que no cambia al reescribir los textos", () => {
 
   it("las huellas siguen siendo las siete registradas", () => {
     const esperadas = [
-      "8820ac2aab0e",
-      "955874c9917f",
-      "f54aefbe02dd",
-      "f172a6c89cb4",
-      "625f3bee4dc7",
-      "f1ba9e3bb78b",
-      "567446f42f2f",
+      "22ef2bac4011",
+      "0f021e275584",
+      "8b9a18cf2f95",
+      "0c81a8d7659d",
+      "16067b6e75bf",
+      "a652f07df766",
+      "1d9aff04245d",
     ];
 
     assert.deepEqual(
