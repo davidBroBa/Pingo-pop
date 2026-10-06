@@ -341,7 +341,117 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
   **200** y al recargar la página **siguen ahí** los valores; desde `/admin/productos` se
   llega a `/admin/legal` y a `/admin/cotizaciones` **con un clic**.
 
-  **NOTA DE VERIFICACIÓN (pendiente).**
+  **NOTA DE VERIFICACIÓN (hecha).**
+  typecheck 0, lint 0, **358 tests / 62 suites / 0 fallos** (347 → 358: 11 nuevos en
+  `tests/legal-panel.test.ts`, escritos primero y **vistos en rojo**:
+  `Cannot find module`). Sin dependencias nuevas.
+
+  **Guardar y que sobreviva a la recarga**, que es el criterio de esta tarea:
+  `PATCH /api/admin/legal` con los seis → **200**; `SELECT * FROM LegalData` →
+  **una sola fila con `id = 1`**; y la **página recargada** trae los cinco valores
+  probados en el HTML, el aviso pasa a **"6 de 6"** y el marcador ya no aparece
+  dentro del panel.
+
+  **El aviso de RF-3 nombra exactamente los que faltan, comprobado en los dos
+  extremos.** Con **2** vacíos (RFC y teléfono, y el teléfono con solo espacios para
+  confirmar que el `preprocess` los trata como ausentes) el aviso dice
+  *"Faltan 2 de los 6 datos legales: RFC y Teléfono"*, y con los **6** vacíos dice
+  *"Faltan 6 de los 6 datos legales: Razón social, RFC, Domicilio fiscal, Correo de
+  contacto, Teléfono y Responsable de los datos personales"*, **en el orden de
+  `CAMPOS_LEGALES`**, que es el que se revisa. La lista sale de `camposFaltantes()`:
+  `textoAvisoFaltantes()` solo la convierte en texto, y un test ata el mapa de
+  etiquetas a los seis campos para que un campo nuevo no se quede sin nombrar.
+
+  **Alcance con un clic, comprobado en el navegador:** desde `/admin/productos` el
+  menu ofrece los **cinco** enlaces y un clic lleva a `/admin/legal` (h1 "Datos
+  legales") y a `/admin/cotizaciones`. Los dos enlaces se publicaron **juntos** en
+  esta tarea y en T12, que es lo que pedia el enunciado: publicar uno antes que su
+  pagina seria repetir el fallo que `AdminNavLinks` existe para evitar.
+
+  **Permisos:** sin sesion la pagina acaba en **`/login`**; con sesion **BUYER**
+  rebota a **`/`** sin pintar el formulario.
+
+  **Un bug mio encontrado al probar en el navegador, y no antes:** la respuesta
+  correcta de `PATCH /api/admin/legal` es **`{ legal: {...} }`**, con envoltorio, y
+  el componente leia `data[campo]`, que siempre es `undefined`. Con eso, el aviso
+  recalculado decia "quedan 6 sin rellenar" **justo despues de haberlos rellenado
+  los seis**, y el panel se ponia rojo en el momento de hacer lo correcto. Por HTTP
+  no se veia: la API respondia bien y los valores llegaban bien al HTML. Solo se
+  vio al rellenar el formulario de verdad y mirar el aviso. Corregido a `data.legal`,
+  con guarda para que si `legal` no viniera se avise de menos y no de mas, y
+  reverificado en el navegador: de *"Faltan 2... RFC y Teléfono"* en rojo a
+  **"6 de 6"** en verde, con cero insignias.
+
+  **Otro test mio fallo por lo que debe:** el guard de F1 que recorre `src/` y falla
+  si el marcador aparece fuera de `legal-data.ts` me cogio a mi, porque lo habia
+  escrito a mano **en el texto que ve el administrador**. Importado de
+  `MARCADOR_PENDIENTE`, que es lo que tocaba. Ese guard acaba de ganar un motivo mas
+  para existir: el texto de la interfaz tambien es codigo que no puede duplicar una
+  constante.
+
+  **Datos de prueba borrados.** Se rellenaron los seis con valores inventados para
+  verificar la recarga, y se vaciaron despues. `LegalData` queda con **una fila y los
+  seis campos en `NULL`**: la fila existe (la creo el primer guardado) pero **no hay
+  ninguna razon social inventada**, que es lo que prohibe RF-2. El aviso vuelve a
+  pedir los seis.
+
+  **Retencion: el aviso pasa de "cuantas" a "cuales" (RF-22, RF-23, RF-24).**
+  Al revisar esta tarea aparecio un hallazgo que no estaba en ningun enunciado:
+  **`marcarParaRevision()` no la llamaba nadie.** Solo se importaba
+  `contarAntiguas()`, que cuenta. Y hay que decir algo que corrige como se
+  planteaba el problema: **no hay nada que "ejecutar"**. RF-22 dice que cumplidos
+  los 12 meses la solicitud "queda marcada para revision: el sistema **no borra
+  sola, avisa**. El borrado lo decide una persona". Una politica que no muta nada
+  no necesita un cron ni una tarea programada: se evalua al leer, y por diseño. La
+  funcion pura es correcta; lo que faltaba era **enseñarla**.
+
+  El fallo real era de avisado a medias: el panel decia cuantos, y **cuales** habia
+  que deducirlos mentalmente de la tabla. Ahora `GET /api/admin/quotes` devuelve
+  tambien `paraRevisar`, que sale de `marcarParaRevision()` con la misma lista y el
+  mismo `hoy` que usa `contarAntiguas()`, y cada fila vencida lleva una insignia
+  con los meses cumplidos y fondo coral. Se anadio ademas un filtro "ver solo las N
+  para revisar", que **solo aparece si hay algo que revisar**: un filtro que no
+  filtra nada es ruido. El contador de la cabecera **no** cambia al filtrar, porque
+  describe el total, no lo que hay debajo.
+
+  **RF-23 comprobado en caliente, que es la regla que mas da pena que se rompa.**
+  Se envejecko artificialmente la solicitud 4 a **14 meses** en `ACCEPTED` y la 2 a
+  **30 meses** en `PENDING`:
+  - `vencidas: 1` y `paraRevisar: [{ id: 4, status: ACCEPTED, meses: 14 }]`.
+  - La 2, con **30 meses cumplidos**, **no aparece**. Una conversacion abierta hace
+    dos años y medio no es un dato caducado, es una conversacion abierta.
+  En el navegador: la fila 4 con fondo `bg-cartoon-coral` e insignia *"14 meses
+  desde su envío: para revisar"*, la 2 sin nada. El filtro deja **solo** la 4, con
+  `aria-pressed="true"` y el boton pasa a decir "Ver todas las solicitudes".
+
+  **El texto de la insignia no dice "vencida" a secas**, porque eso se lee como "ya
+  no existe", y el sistema **no** ha borrado nada: dice *"para revisar"*. Hay un test
+  que lo comprueba negando las palabras "borrada" y "eliminada".
+
+  **Sin columna nueva, sin cron y sin endpoint nuevo.** Anadir un campo "revisada"
+  en el esquema seria inventar estado que ningun RF pide, y la spec es explicita en
+  que la decision es de una persona. Si el administrador decide **conservar** una
+  solicitud vencida, seguira apareciendo como vencida, y eso es lo correcto: sigue
+  pasados los 12 meses.
+
+  Tests **358 → 366**: 8 nuevos en `tests/cotizaciones-panel.test.ts`, escritos
+  primero y **vistos en rojo** (8 fallos). El indice de vencidas es un `Map` y no
+  una busqueda lineal porque el listado se repinta entero en cada render, y con 300
+  filas eso serian 90.000 comparaciones cada vez. El `filtrarSoloVencidas()` **no
+  muta** el array recibido, porque el listado completo lo necesitan la cabecera y
+  para apagar el filtro.
+
+  **Dos ideogramas se me colaron** en los comentarios de este bloque y los pillo el
+  barrido con su control positivo.
+
+  **Datos de prueba restaurados.** El envejecimiento artificial se deshizo con
+  `UPDATE` a los `createdAt` y estados originales de las dos solicitudes, y se
+  comprobo que la API vuelve a `vencidas: 0`.
+
+  **Pendiente que esta nota no cierra, y es importante:** rellenar los datos **sigue
+  sin cambiar nada visible**, porque `readLegalData()` no lo llama ninguna pagina
+  todavia. Eso es T13 (F5), las siete paginas legales, que es el punto 4 del
+  recuento. Este panel es la via de entrada; el destino es la F5.
 
 - [ ] **T12** — `src/app/admin/cotizaciones/page.tsx` (**protegida**, `force-dynamic` **en el
   `page.tsx`**) + `CotizacionesView.tsx` (cliente) con **listado**, **detalle**, **cambio de
@@ -358,7 +468,69 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
   (comprobado con `SELECT COUNT(*)`, no mirando la interfaz); el listado **muestra** la
   versión aceptada de cada solicitud.
 
-  **NOTA DE VERIFICACIÓN (pendiente).**
+  **NOTA DE VERIFICACIÓN (hecha).**
+  `npm run check` → **exit 0**: typecheck 0, lint 0, **347 tests / 59 suites / 0 fallos**,
+  build correcto con **28 rutas** (27 + este panel). `/admin/cotizaciones` sale **`ƒ`**
+  (dinámica) en la tabla del build, que es lo que exige el `force-dynamic`.
+  Tests **332 → 347**: 15 nuevos en `tests/cotizaciones-panel.test.ts`, escritos primero y
+  **vistos en rojo** (`Cannot find module`). Sin dependencias nuevas.
+
+  **V10, las cuatro operaciones, comprobadas contra el servidor y no leyendo el código:**
+  - **Listado**: 3 solicitudes servidas por `GET /api/admin/quotes`, cada una con su
+    `_count.items` y su `legalAcceptances`.
+  - **Detalle**: `GET /api/quotes/4` → **200** con `2 × Pin VIP` y sus dos aceptaciones.
+  - **Cambio de estado**: `status: "inventado"` → **400**; `ACCEPTED` → **200**;
+    `id: 9999` → **404**; y el valor **persiste** en la base de datos (`SELECT status`
+    = `QUOTED` despues de cambiarlo desde la interfaz).
+  - **Borrado**: antes **1 / 1 / 2** (`QuoteRequest`, `QuoteRequestItem`,
+    `LegalAcceptance`), despues **0 / 0 / 0**. Repetido → **404**.
+
+  **Nadie fuera del admin la ve, por los dos caminos:** sin sesion → **307** a
+  `/login` (y `/admin/apariencia`, `/admin/productos` y `/admin/categorias` dan el
+  mismo **307**, o sea que el panel se comporta como sus hermanos); con sesion
+  **BUYER** → **403** en `GET /api/admin/quotes`, en `GET /api/quotes/4` y en
+  `DELETE /api/quotes/4`, y la pagina rebota a `/` sin pintar nada. Comprobado ademas
+  que la solicitud 4 **sigue existiendo** tras los intentos con BUYER: los 403 no
+  tocaron nada.
+
+  **Contador de vencidas, contrastado por fuera.** La API dice **0** y
+  `contarAntiguas()` calculada aparte sobre la misma lista dice **0**, con una fila en
+  estado terminal (y reciente), que es el caso que mas se presta a confusion. Para
+  que el contraste no fuera trivial se envejencio esa fila terminal a 14 meses en una
+  copia de la respuesta: el calculo dio **1**, asi que la funcion cuenta cuando debe y
+  la API esta usando esa misma funcion. `retention.test.ts` cubre la regla con fechas.
+
+  **Que se ve, leido del DOM del navegador:** la solicitud 4 pinta
+  `Acepto: Términos y condiciones 1.0 · Aviso de privacidad 1.0`, y la solicitud 2,
+  que **no tiene** aceptaciones, pinta `Acepto: Ninguna`. Un vacío ahi habria parecido
+  un fallo de carga.
+
+  **Dos errores mios, corregidos antes de entregar, y por que los menciono:** (1) se
+  me olvido el `force-dynamic`; (2) puse `new Date()` a **nivel de modulo**, lo que
+  congela el reloj al arrancar el proceso: en un servidor con semanas vivo, todas las
+  antiguedades del panel serian las del arranque. Ahora se lee dentro de la funcion.
+  Ademas, tres tests nuevos estaban mal escritos (comparaban en minuscula contra un
+  titulo en mayuscula, y buscaban una palabra que el texto no tenia); al arreglarlos
+  aparecio que **el panel tampoco llevaba acentos**, el mismo defecto que se corrigio
+  en los documentos legales.
+
+  **Desviacion de una convencion del proyecto, y por que:** los otros paneles reciben
+  los datos por props desde su pagina. Este los carga desde el navegador, y **no** es
+  capricho: lo unico que comprueba la revocacion de una sesion es `requireAdmin()`,
+  que usa `getSessionUser()` y consulta la base de datos; el middleware corre en Edge
+  y no tiene Prisma. Una pagina que consultara Prisma por su cuenta serviria el HTML
+  a una sesion ya invalidada por un cambio de contrasena. El coste es un
+  `eslint-disable react-hooks/set-state-in-effect` **con el motivo escrito dentro**,
+  igual que el del carrito.
+
+  **Datos de prueba restaurados.** El borrado se verifico con la solicitud 14, que
+  era de pruebas propias, y los estados que se tocaron se devolvieron a `PENDING`.
+  Quedan las dos que el propietario decidio conservar.
+
+  **Pendiente que esta nota no cierra:** `/admin/legal` entra en este mismo bloque
+  (T11). El enlace **no** se ha anadido al menu todavia, a proposito: publicar el
+  enlace antes de la pagina seria repetir el fallo que `AdminNavLinks` existe para
+  evitar, y un 404 en el menu de trabajo se nota mas que un enlace que no aparece.
 
 ---
 
