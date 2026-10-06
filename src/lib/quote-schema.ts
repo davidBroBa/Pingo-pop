@@ -25,7 +25,10 @@ export const CreateQuoteSchema = z.object({
     .refine((value) => !hasControlChars(value), {
       message: "El nombre contiene caracteres no permitidos",
     }),
-  email: z.string().trim().email("Email no valido").max(254).nullish(),
+  email: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    z.string().trim().email("Email no valido").max(254).nullish(),
+  ),
   phone: z
     .string()
     .trim()
