@@ -51,6 +51,59 @@ model SiteSettings {
   updatedAt DateTime @updatedAt
 }
 
+/**
+ * Datos legales del responsable (spec 009, RF-1, D18).
+ *
+ * **Una sola fila**, con `id` fijo a `1`, igual que `SiteSettings`: el id fijo y el
+ * `upsert` son lo que impiden el error de crear una fila por guardado y acabar
+ * leyendo un valor al azar. **No hay paso de siembra**: la fila aparece la primera
+ * vez que el administrador guarda.
+ *
+ * Los seis campos son **opcionales a proposito**. Los rellena una persona desde
+ * `/admin/legal` (D18), no una variable de entorno, para que no haga falta SSH. Un
+ * campo ausente **no** se sustituye por un valor inventado: las paginas muestran el
+ * marcador `MARCADOR_PENDIENTE` de `src/lib/legal-data.ts` en su lugar (RF-2).
+ */
+model LegalData {
+  id Int @id @default(1)
+
+  razonSocial           String?
+  rfc                   String?
+  domicilioFiscal       String?  @db.Text
+  correoContacto        String?
+  telefono              String?
+  responsablePrivacidad String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * Evidencia de que alguien acepto una version de un documento (spec 009, RF-19).
+ *
+ * Se guarda **cuatro** campos y ni uno mas (RF-20). En concreto, **no** guarda IP,
+ * ni nombre, ni correo, ni un identificador de usuario: el vinculo con la persona ya
+ * existe a traves de `quoteRequestId`, y duplicar esos datos seria recolectar sin
+ * finalidad, que es justo lo que este proyecto quiere evitar.
+ */
+model LegalAcceptance {
+  id         Int           @id @default(autoincrement())
+  tipo       LegalDocType
+  version    String
+  aceptadoAt DateTime      @default(now())
+
+  // Opcional a proposito, y con `SetNull` en vez de `Cascade`: si se borra la
+  // solicitud (retencion o cancelacion), **el registro de aceptacion sobrevive**.
+  // Puede, porque no contiene ningun dato personal: `tipo`, `version` y `aceptadoAt`
+  // siguen siendo prueba de que version estaba vigente. Un `Cascade` lo borraria,
+  // y con el la unica evidencia de que se acepto.
+  quoteRequestId Int?
+  quoteRequest   QuoteRequest? @relation(fields: [quoteRequestId], references: [id], onDelete: SetNull)
+
+  @@index([tipo, version])
+  @@index([quoteRequestId])
+}
+
 model Category {
   id          Int      @id @default(autoincrement())
   name        String
@@ -81,17 +134,55 @@ model Product {
   quoteRequestItems QuoteRequestItem[]
 }
 
+/**
+ * Estado de una solicitud de cotizacion (spec 009, RF-26).
+ *
+ * Antes era un `String` libre que **nadie leia ni escribia**: se creaba como
+ * `PENDING` y se quedaba ahi para siempre. Con enumeracion, el panel puede
+ * filtrar por estado y la retencion puede distinguir una conversacion en curso de
+ * una terminada.
+ *
+ * Los **terminales** son `ACCEPTED`, `REJECTED` y `CANCELLED`, y son los unicos que
+ * pueden marcarse por antiguedad (ver `MESES_RETENCION` en `src/lib/retention.ts`).
+ */
+enum QuoteStatus {
+  PENDING
+  QUOTED
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+/**
+ * Documento legal sobre el que alguien acepta o no (spec 009, RF-20).
+ *
+ * Solo los **tres** que llevan consentimiento. Los otros cuatro documentos
+ * (envios, devoluciones, informacion legal y accesibilidad) se publican, pero no se
+ * "aceptan" con un clic: no hay una decision que registrar.
+ */
+enum LegalDocType {
+  TERMINOS
+  PRIVACIDAD
+  COOKIES
+}
+
 model QuoteRequest {
   id        Int      @id @default(autoincrement())
   name      String
   email     String?
   phone     String
   details   String   @db.Text
-  status    String   @default("PENDING")
+  status    QuoteStatus @default(PENDING)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  items QuoteRequestItem[]
+  // Token que genera el cliente para que dos envios seguidos **no** creen dos
+  // solicitudes (RF-27). Es unico y opcional: las peticiones antiguas, que no lo
+  // traian, siguen siendo validas.
+  idempotencyKey String? @unique
+
+  items            QuoteRequestItem[]
+  legalAcceptances LegalAcceptance[]
 }
 
 model QuoteRequestItem {
