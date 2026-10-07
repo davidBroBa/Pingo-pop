@@ -5,12 +5,12 @@
 
 ## Fase actual
 
-- **Spec 009 `legal-compliance-privacy`: cerrada y verificada el 2026-10-07
-  (18/18 casillas con su nota).** Sin commits: el árbol lleva specs 006/007/009.
-  Gate final hoy, con el dev server parado: typecheck 0 · lint 0 ·
-  **419 tests / 77 suites / 0 fallos** · build **38 rutas**.
-- **`spec.md` 009 sigue en BORRADOR a propósito**: cambiar el estado es decisión del
-  usuario (lo dice el propio `tasks.md`), no algo que cierra la spec.
+- **Spec 009 `legal-compliance-privacy`: cerrada, verificada y APROBADA por el
+  usuario el 2026-10-07** (18/18 casillas con su nota; `spec.md` APROBADA).
+  Commiteada y pusheada (`b305b69`). Gate con dev server parado: typecheck 0 ·
+  lint 0 · **419 tests / 77 suites / 0 fallos** · build **38 rutas**.
+- **Próximo paso: desplegar al servidor** con `docs/DEPLOY.md`, `SITE_URL` real
+  (aún `localhost`) y subdominio en Cloudflare (pendiente de datos del usuario).
 - Migraciones al día: `npx prisma migrate status` → "up to date", **9** (las 6 de la
   008 + `add_legal_models` + `quote_status_enum` + la de la 007, `add_usuario_estado`).
 
@@ -92,8 +92,8 @@
 
 ## Repositorio y despliegue
 
-- **GitHub:** `github.com/davidBroBa/Pingo-pop`, rama `main`, público. Árbol con specs
-  006/007/009 sin commitear; **barrido de secretos antes de cada commit**
+- **GitHub:** `github.com/davidBroBa/Pingo-pop`, rama `main`, público. Specs 006/007/009
+  commiteadas y pusheadas en **`b305b69`**. **Barrido de secretos antes de cada commit**
   (`docs/PUBLICAR.md` §2).
 - **Producción:** `~/proyectos/pingo-pop` en `srv` (túnel `3001→3000`). IP y usuario
   nunca en ficheros publicables.

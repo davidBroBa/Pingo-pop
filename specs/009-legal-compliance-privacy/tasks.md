@@ -2,9 +2,8 @@
 
 > Spec con **D14–D19 cerradas** el 2026-10-06. Plan en `plan.md` (fases F0–F10). **D17:**
 > una sola spec, en once bloques, sin partirla.
-> ✅ **Implementación completa y verificada el 2026-10-07** (18/18 casillas con su nota).
-> El encabezado de `spec.md` sigue en **BORRADOR**: cambiarlo a aprobada es decisión del
-> usuario (`tasks.md` §"Lo que no se hace al terminar"), no algo que cierre esta spec.
+> **✅ Implementación completa y verificada el 2026-10-07** (18/18 casillas con su nota).
+> **APROBADA por el usuario el 2026-10-07** (estado de `spec.md`).
 > **Test-first**: cada test se escribe y **se ve fallar** antes del código que lo hace
 > pasar. La casilla se marca con el comando y la **salida real** que lo demuestra.
 > **NO se hace commit.**
