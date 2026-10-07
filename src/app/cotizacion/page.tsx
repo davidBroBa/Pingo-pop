@@ -1,13 +1,46 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Minus, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Minus, Plus, Trash2, AlertCircle } from "lucide-react";
 import { useState } from "react";
 
 import { QuoteCartForm } from "@/components/sections/QuoteCartForm/QuoteCartForm";
 import { useQuoteCart } from "@/context/QuoteCartContext";
 
 import { MainLayout } from "@/components/layout";
+
+/**
+ * Aviso RF-10: esto NO es un checkout.
+ *
+ * El banner va **antes** del formulario, para que se lea antes de cualquier
+ * interaccion. No es un adorno: la diferencia entre "solicitar cotizacion" y
+ * "comprar" es el nucleo del negocio, y si alguien lo confunde el problema
+ * llega al administrador (precio final distinto, expectativas rotas).
+ */
+function AvisoCotizacion() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="cartoon-border cartoon-shadow rounded-3xl bg-cartoon-sky p-4 sm:p-6 mb-8"
+    >
+      <div className="flex items-start gap-3">
+        <AlertCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" aria-hidden="true" />
+        <div>
+          <p className="font-semibold text-primary">
+            Esto es una <strong>solicitud de cotizacion</strong>, no una compra.
+          </p>
+          <p className="mt-1 text-sm text-foreground-muted">
+            Los precios que ves son <strong>precios de catalogo</strong>. El precio
+            final se acuerda por escrito tras revisar la solicitud, y puede ser
+            distinto del que aparece aqui. No se cobra nada hasta confirmarlo por
+            escrito.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function CotizacionPage() {
   const { items, removeItem, updateQuantity, clearCart } = useQuoteCart();
@@ -75,6 +108,8 @@ export default function CotizacionPage() {
           <ArrowLeft size={16} />
           Volver a productos
         </Link>
+
+        <AvisoCotizacion />
 
         <div className="mb-12 max-w-2xl">
           <span className="cartoon-border cartoon-shadow-sm inline-block rotate-[-1deg] rounded-full bg-white px-3 py-1 text-sm font-semibold uppercase tracking-[0.15em] text-primary">

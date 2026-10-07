@@ -42,6 +42,11 @@ nadie ha hecho todavía un `git add -A` y una auditoría de lo que saldría.
 > `docker-compose.yml` sí se sube: lee las credenciales de las variables de entorno,
 > no las contiene.
 
+`LegalData` (los datos legales del propietario) **no es un fichero que se publique**:
+es una fila de la base de datos, se rellena desde `/admin/legal` y viaja en la BD, no
+en el repo. `SITE_URL` tampoco: es de entorno, vive en el `.env` del servidor y cae
+bajo el barrido de la §2 (si no está, el `sitemap` usa `http://localhost:3000`).
+
 ## 2. Barrido de secretos (ejecutado)
 
 **Método:** se leyeron los 7 valores reales de `.env` y se buscó **cada valor

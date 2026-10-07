@@ -391,7 +391,7 @@ export default function AdminProductsView({
                 onChange={(event) => {
                   void handleImageChange(event.target.files?.[0]);
                 }}
-                className="text-sm text-foreground-muted file:mr-4 file:rounded-xl file:border-2 file:border-primary file:bg-accent file:px-5 file:py-2.5 file:text-sm file:font-semibold disabled:opacity-60"
+                className="text-sm text-foreground-muted file:mr-4 file:rounded-xl file:border-2 file:border-primary file:bg-accent file:px-5 file:py-2.5 file:text-sm file:font-semibold file:text-primary disabled:opacity-60"
               />
 
               {form.image !== "" && (

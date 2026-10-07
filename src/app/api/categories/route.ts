@@ -3,14 +3,28 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { prisma } from "@/lib/prisma";
 import { describePrismaError } from "@/lib/prisma-error";
+import { clientKey, consume, MAX_LECTURAS_PUBLICAS, retryAfterSeconds } from "@/lib/rate-limit";
 import {
   CreateCategorySchema,
   slugify,
   validationError,
 } from "@/lib/validation";
 
-/** Lista categorias. Publico: alimenta los filtros del catalogo. */
-export async function GET(): Promise<NextResponse> {
+/**
+ * Lista categorias. Publico: alimenta los filtros del catalogo.
+ *
+ * Lleva rate limit de lectura (RF-33), igual que `GET /api/products`: la
+ * firma recibe `request` porque las cabeceras de la IP llegan ahi.
+ */
+export async function GET(request: Request): Promise<NextResponse> {
+  const key = clientKey(request.headers);
+  if (!consume(key, MAX_LECTURAS_PUBLICAS)) {
+    return NextResponse.json(
+      { error: "Demasiadas peticiones. Intenta de nuevo mas tarde." },
+      { status: 429, headers: { "Retry-After": String(retryAfterSeconds(key)) } },
+    );
+  }
+
   try {
     const categories = await prisma.category.findMany({
       orderBy: { name: "asc" },
@@ -19,7 +33,7 @@ export async function GET(): Promise<NextResponse> {
   } catch (error) {
     const fallo = describePrismaError(error, "No se pudieron obtener las categorías.");
     if (fallo.serverFault) {
-      console.error("GET /api/categories error:", error);
+      console.error("GET /api/categories error:", fallo.message);
     }
     return NextResponse.json({ error: fallo.message }, { status: fallo.status });
   }
@@ -72,7 +86,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   } catch (error) {
     const fallo = describePrismaError(error, "No se pudo crear la categoría.");
     if (fallo.serverFault) {
-      console.error("POST /api/categories error:", error);
+      console.error("POST /api/categories error:", fallo.message);
     }
     return NextResponse.json({ error: fallo.message }, { status: fallo.status });
   }

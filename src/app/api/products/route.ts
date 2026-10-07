@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { prisma } from "@/lib/prisma";
 import { describePrismaError } from "@/lib/prisma-error";
+import { clientKey, consume, MAX_LECTURAS_PUBLICAS, retryAfterSeconds } from "@/lib/rate-limit";
 import {
   CreateProductSchema,
   UpdateProductSchema,
@@ -16,8 +17,21 @@ import {
  *
  * GET es publico: el catalogo es la cara visible de la tienda. Las
  * operaciones de escritura si exigen rol ADMIN, comprobado en el servidor.
+ *
+ * Lleva rate limit de lectura (RF-33): la firma recibe `request` porque las
+ * cabeceras de la IP llegan ahi. El limite sale de la constante con nombre
+ * `MAX_LECTURAS_PUBLICAS`, alto a proposito para que el panel de
+ * administracion no se bloquee a si mismo tras cada escritura.
  */
-export async function GET(): Promise<NextResponse> {
+export async function GET(request: Request): Promise<NextResponse> {
+  const key = clientKey(request.headers);
+  if (!consume(key, MAX_LECTURAS_PUBLICAS)) {
+    return NextResponse.json(
+      { error: "Demasiadas peticiones. Intenta de nuevo mas tarde." },
+      { status: 429, headers: { "Retry-After": String(retryAfterSeconds(key)) } },
+    );
+  }
+
   try {
     const products = await prisma.product.findMany({
       include: { category: true },
@@ -27,7 +41,7 @@ export async function GET(): Promise<NextResponse> {
   } catch (error) {
     const fallo = describePrismaError(error, "No se pudieron obtener los productos.");
     if (fallo.serverFault) {
-      console.error("GET /api/products error:", error);
+      console.error("GET /api/products error:", fallo.message);
     }
     return NextResponse.json({ error: fallo.message }, { status: fallo.status });
   }
@@ -73,7 +87,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   } catch (error) {
     const fallo = describePrismaError(error, "No se pudo crear el producto.");
     if (fallo.serverFault) {
-      console.error("POST /api/products error:", error);
+      console.error("POST /api/products error:", fallo.message);
     }
     return NextResponse.json({ error: fallo.message }, { status: fallo.status });
   }
@@ -120,7 +134,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
   } catch (error) {
     const fallo = describePrismaError(error, "No se pudo actualizar el producto.");
     if (fallo.serverFault) {
-      console.error("PUT /api/products error:", error);
+      console.error("PUT /api/products error:", fallo.message);
     }
     return NextResponse.json({ error: fallo.message }, { status: fallo.status });
   }
@@ -156,7 +170,7 @@ export async function DELETE(request: Request): Promise<NextResponse> {
   } catch (error) {
     const fallo = describePrismaError(error, "No se pudo eliminar el producto.");
     if (fallo.serverFault) {
-      console.error("DELETE /api/products error:", error);
+      console.error("DELETE /api/products error:", fallo.message);
     }
     return NextResponse.json({ error: fallo.message }, { status: fallo.status });
   }

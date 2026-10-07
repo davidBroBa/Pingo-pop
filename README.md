@@ -35,7 +35,7 @@ Repositorio: [`github.com/davidBroBa/Pingo-pop`](https://github.com/davidBroBa/P
 | Base de datos | MariaDB 11 / MySQL 8 | Docker en local, servicio propio en el servidor |
 | Zod | 4.6.5 | Validación en el borde de toda entrada externa |
 | argon2 | 0.45.1 | Hash de contraseñas (argon2id) |
-| Tests | `node:test` + `tsx` 4.23 | 26 suites, 190 pruebas, **sin framework adicional** |
+| Tests | `node:test` + `tsx` 4.23 | 77 suites, 419 pruebas, **sin framework adicional** |
 
 Node: **20.9 o superior** (lo exige Next 16). `package.json` no declara `engines`, así
 que npm no te avisará si usas una versión antigua: compruébalo tú (`node -v`).
@@ -114,7 +114,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 | `npm run start` | Ejecuta el build (`next start -p 3000`) |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npm test` | `node --import tsx --test "tests/**/*.test.ts"` - 190 pruebas, 26 suites |
+| `npm test` | `node --import tsx --test "tests/**/*.test.ts"` - 419 pruebas, 77 suites |
 | `npm run check` | **typecheck + lint + test + build**. Es el gate: úsalo antes de entregar |
 | `npm run db:seed` | Crea el ADMIN inicial (argon2id) |
 | `node scripts/check-control-chars.mjs <fichero>` | Detecta bytes de control que rompen el parseo de TypeScript |
@@ -125,7 +125,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 npm run check      # typecheck && lint && test && build
 ```
 
-Estado actual (2026-10-05): **typecheck OK, lint OK, 190/190 tests, build OK (22
+Estado actual (2026-10-07): **typecheck OK, lint OK, 419/419 tests, build OK (38
 rutas)**. `npm audit` deja **8 vulnerabilidades altas residuales, todas en
 herramientas de desarrollo** (`eslint-config-next → fast-glob → micromatch →
 braces`, sin parche disponible) y **no llegan a runtime**. El detalle está en
@@ -158,7 +158,7 @@ src/
 prisma/
   schema.prisma, migrations/  Las migraciones SÍ se versionan
   seed.ts, make-buyer.ts
-tests/            26 suites con node:test (sin jsdom)
+tests/            77 suites con node:test (sin jsdom)
 docs/             SDD, THREATS, DESIGN, GATES, DEPLOY, PUBLICAR, constitution
 specs/            001-pingo-rework, 002-cartoon-visual (spec, plan, tasks)
 ```
@@ -272,11 +272,11 @@ Dos avisos que cuestan tiempo si no los conoces:
 
 Cosas que **no** funcionan y conviene saber antes de prometer nada:
 
-- **El formulario de cotización devuelve 400 si el email queda vacío.** El campo
-  está marcado como opcional en la interfaz, pero `QuoteCartForm` manda `""` y
-  `CreateQuoteSchema` rechaza la cadena vacía como email inválido. **Bug
-  preexistente, encontrado al verificar la spec 003, sin arreglar.** Quien quiera
-  pedir una cotización sin escribir su correo recibe un error.
+- **El formulario de cotización no exige el correo.** `CreateQuoteSchema` trata el
+  email como **opcional** (`""`/espacios → ausente, `.nullish()`); un envío válido
+  responde **201** (y **200** si el mismo token de idempotencia ya creó la solicitud:
+  la respuesta correcta es la solicitud ya existente, no un error). La versión
+  aceptada de los documentos legales la pone el servidor, no el navegador.
 - **Una sesión revocada todavía puede pintar la estructura del panel.** Al cambiar la
   contraseña se invalidan todas las sesiones (spec 006), pero el middleware corre en
   **Edge** y no puede consultar la base de datos, así que solo comprueba la firma. El

@@ -10,16 +10,22 @@ import { LegalPage } from "@/components/legal/LegalPage";
  * prerenderizada publicaria los marcadores de "falta este dato" congelados en el
  * momento del build.
  *
- * Es el documento con más marcadores: casi todos los `{{...}}` apuntan aquí.
+ * ## Lo que este documento NO dice (V14)
+ *
+ * **No dice que el sitio cumpla ninguna ley en particular.** No se ha hecho una
+ * auditoria externa, asi que afirmar cumplimiento seria mentira. El texto describe
+ * **lo que el negocio hace**: que datos recopila, para que, cuanto los guarda,
+ * como ejercer los derechos ARCO, y que no hay proveedor de correo, analitica ni
+ * pasarela de pago.
  */
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Aviso de privacidad | Pingo POP",
   description:
-    "Qué datos personales recoge Pingo POP al pedir una cotización, para qué se usan, cuánto tiempo se conservan y cómo se ejercen los derechos de acceso, rectificación y supresión.",
+    "Que datos personales recopila Pingo POP, para que se usan, cuanto se conservan, como ejercer los derechos ARCO y que no se comparten con terceros.",
 };
 
-export default function AvisoPrivacidadPage() {
+export default function PrivacidadPage() {
   return <LegalPage slug="aviso-de-privacidad" />;
 }

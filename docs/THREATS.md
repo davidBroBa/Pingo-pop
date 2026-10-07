@@ -56,6 +56,14 @@ y el nombre del fichero lo genera el servidor.
 | I | Filtrar el hash en una respuesta de error | Critica | Baja | `select` acotado; `console.error` sin objetos de usuario | Bajo |
 | D | Forzar bruta contra el login | Alta | Alta | Rate limit por IP (10 / 15 min) | Medio (en memoria) |
 | E | Escalar de comprador a administrador | Critica | Alta | Rol dentro del token firmado; el cliente no lo elige | Bajo |
+| E | **Escalada de privilegios: un ADMIN crea otro ADMIN** (spec 007, T1) | Critica | Media | **Aceptado por decision del propietario (D22)**. Se deja escrito para que sea una decision consciente y no un descuido | **Aceptado** |
+| S | **Robo de identidad por correo: alguien crea una cuenta con el correo de otra persona** (spec 007, T2) | Critica | Media | El sistema **no envia correo** (no hay proveedor), asi que la suplantacion no tiene vector de ataque: nadie recibe nada. Se anota el riesgo para cuando haya correo | Bajo |
+| T | **Contrasena temporal que nunca se cambia** (spec 007, T3) | Critica | Media | RF-5 obliga el cambio; RF-6 quita `/admin/*` mientras siga puesta; el `proxy` no deja salir de `/perfil` | Bajo |
+| D | **Denegacion de servicio por autoexclusion** (spec 007, T4, RF-10) | Alta | Baja | Nadie puede desactivar su propia cuenta ni cambiar su propio rol (el propio administrador no puede dejar el sitio sin administrador) | Bajo |
+| I | **Puerta trasera por GET: existencia de un listado publico de cuentas** (spec 007, T5) | Critica | Baja | RF-1 y RF-2: el listado es de ADMIN, y **no** hay ninguna ruta publica de usuarios | Bajo |
+| I | **Fuga de hashes en el listado** (spec 007, T6, RF-2) | Critica | Baja | El listado **no** incluye `passwordHash`. Un hash de argon2id en una respuesta HTTP es una fuga aunque no se pueda revertir | Bajo |
+| T | **Fallo abierto en revocacion** (spec 007, T7, RF-12) | Critica | Media | Si no se puede comprobar la revocacion, se deniega (fail closed) | Bajo |
+| S | **Correo duplicado que se traga un error de base de datos** (spec 007, T8) | Critica | Media | RF-4: `P2002` se traduce a **409**, no a 500 | Bajo |
 
 **Nota sobre el limitador.** Vive en un `Map` del proceso. Con una sola instancia es
 correcto; con varias, cada una lleva su cuenta y el tope se multiplica. Migrarlo a
@@ -163,12 +171,13 @@ proyecto.
 |---|---|---|
 | Tipos | `npm run typecheck` | Sin errores |
 | Lint | `npm run lint` | Sin errores ni avisos |
-| Pruebas | `npm test` | 65 pruebas, 65 correctas |
-| Compilacion | `npm run build` | Compila; 15 rutas |
-| Firma de sesion | `tests/session-token.test.ts` | 13 pruebas, incluida la falsificacion de payload |
+| Pruebas | `npm test` | **419 pruebas**, **419 correctas** |
+| Compilacion | `npm run build` | Compila; **38 rutas** |
+| Firma de sesion | `tests/session-token.test.ts` | 23 pruebas: firma/verificacion (14), version `sv` (5), contrasena temporal `swc` (4) |
+| Sesion con contrasena temporal | `tests/sesion-temporal.test.ts` | 11 pruebas: proxy y `requireAdmin()` coinciden |
 | Validacion de imagenes | `tests/upload-validation.test.ts` | 11 pruebas, incluido HTML disfrazado de JPEG |
 | Esquemas de entrada | `tests/validation.test.ts` | 29 pruebas, incluido path traversal |
-| Rate limit | `tests/rate-limit.test.ts` | 12 pruebas |
+| Rate limit | `tests/rate-limit.test.ts` | 13 pruebas: limitador (7), RF-33 tope 120 (2), extraccion de IP (4) |
 | Cookie falsificada en el navegador | Peticion a `/admin/productos` con cookie base64 crafted | 307 a `/login` |
 | API sin sesion | POST a products, categories, upload | 401 en las tres |
 | API con cookie falsificada | Igual, con cookie `role: ADMIN` sin firma | 401 en las tres |

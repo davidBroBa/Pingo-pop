@@ -71,7 +71,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       select: { passwordHash: true, role: true, sessionVersion: true },
     });
   } catch (error) {
-    console.error("POST /api/account/password: no se pudo leer el usuario:", error);
+    console.error(
+      "POST /api/account/password: no se pudo leer el usuario:",
+      error instanceof Error ? error.message : String(error),
+    );
     return NextResponse.json(
       { error: "Servicio no disponible. Intenta de nuevo en unos minutos." },
       { status: 503, headers: { "Retry-After": "30" } },
@@ -115,12 +118,24 @@ export async function POST(request: Request): Promise<NextResponse> {
     // Un solo `update`: hash y version suben juntos, o no sube ninguno. Si se
     // cambiaran por separado, una caida entre medias podria dejar una contrasena
     // nueva con la version vieja, es decir, sesiones vivas.
+    //
+    // `debeCambiarContrasena: false` va **en la misma actualizacion** (spec 007,
+    // D21): aqui es justo donde la cuenta deja de estar en modo temporal, y
+    // hacerlo en otro sitio dejaria una ventana en la que ya tiene la contrasena
+    // buena y sigue marcada.
     await prisma.user.update({
       where: { id: session.userId },
-      data: { passwordHash, sessionVersion: { increment: 1 } },
+      data: {
+        passwordHash,
+        sessionVersion: { increment: 1 },
+        debeCambiarContrasena: false,
+      },
     });
   } catch (error) {
-    console.error("POST /api/account/password: no se pudo guardar:", error);
+    console.error(
+      "POST /api/account/password: no se pudo guardar:",
+      error instanceof Error ? error.message : String(error),
+    );
     return NextResponse.json(
       { error: "No se pudo cambiar la contrasena. Intenta de nuevo." },
       { status: 500 },

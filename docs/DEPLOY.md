@@ -17,6 +17,11 @@ los errores de la §6 son reales y cuestan tiempo.
 | Respaldo del código | `/tmp/pingo-src-backup-<n>` |
 | Acceso desde el PC de desarrollo | **bloqueado por firewall**: el puerto 3000 del servidor no responde |
 
+`SITE_URL` es la **única variable nueva** desde la spec 009. Sin ella el build termina
+igual, pero `sitemap.xml` publica el valor de reserva `http://localhost:3000`: **poner
+el dominio real en el `.env` del servidor antes de desplegar**, o el sitemap publica
+`localhost`.
+
 Herramienta de trabajo: el wrapper `srv.ps1` de la skill `proyecto-estandar`. Se
 invoca **con el operador `&` en el mismo proceso**, nunca con `powershell -File`.
 
@@ -166,6 +171,11 @@ setsid nohup npm run start > /tmp/pingo-pop-start.log 2>&1 < /dev/null &
 `prisma/migrations/` no se toca en un despliegue de código: las migraciones se
 aplican aparte y a conciencia (`npx prisma migrate deploy`). Nunca
 `prisma migrate reset` en el servidor: borra los datos.
+
+Las migraciones de la spec 009 se aplican con ese mismo `migrate deploy`, en orden
+por timestamp: `20261006060734_add_legal_models` → `20261006061512_quote_status_enum`
+(+ la de la spec 007, `20261006202511_add_usuario_estado`). `migrate deploy` no toca
+datos: crea tablas, columnas y enums.
 
 ## 6. Errores reales de este despliegue
 

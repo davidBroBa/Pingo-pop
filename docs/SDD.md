@@ -93,9 +93,9 @@ firma. Por eso una cookie revocada todavía puede renderizar el *shell* de `/adm
 
 ## 9. Testing
 - `node:test` + `tsx`
-- Suites: `session-token` (firma/verificación/expiración/tamper/**versión de sesión**), `session-revocation` (matriz de vigencia), `rate-limit` (memoria, ventana), `upload-validation` (magic bytes, whitelist, tamaño), `validation` (Zod + control chars + image ""), `prisma-error` (mapeo códigos), `quote-cart-storage` (carrito guardado), `account-schema` (**las dos políticas de contraseña** + esquemas de cuenta)
+- Suites: `session-token` (firma/verificación/expiración/tamper/**versión de sesión**), `session-revocation` (matriz de vigencia), `rate-limit` (memoria, ventana), `upload-validation` (magic bytes, whitelist, tamaño), `validation` (Zod + control chars + image ""), `prisma-error` (mapeo códigos), `quote-cart-storage` (carrito guardado), `account-schema` (**las dos políticas de contraseña** + esquemas de cuenta), y las de la spec 009: `consent` (registro, decisiones, RF-17), `legal-versions` (documentos, huellas, tokens), `legal-data` (campos legales, marcador), `legal-texto` (negritas, textos reales), `retention` (vencidas, estadios terminales), `quote-idempotency` (token único, rate limit, extracción de IP), `sesion-temporal` (swc compartido por proxy y `requireAdmin`), `usuarios` + `usuarios-panel` (esquemas y etiquetas del panel)
 - **Sin jsdom**: la lógica comprobable se extrae a módulos puros de `src/lib/` sin acceso al DOM. Por eso existen `quote-cart-storage.ts` y `account-schema.ts` separados de los componentes de React, que solo hidratan y coordinan
-- 190/190 passing
+- 419/419 passing (77 suites)
 
 ## 10. Despliegue
 - Build con `npm run build` (requiere `DATABASE_URL`, `SESSION_SECRET`)

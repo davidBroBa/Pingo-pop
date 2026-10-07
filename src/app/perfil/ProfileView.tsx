@@ -21,6 +21,20 @@ type ProfileViewProps = {
   sesion: { emitidaEn: string; caducaEn: string };
   /** `true` solo para ADMIN: habilita el bloque de datos que un usuario no ve. */
   esAdmin: boolean;
+  /**
+   * `true` si la cuenta sigue con la **contrasena temporal** que le puso un
+   * administrador (spec 007, D21).
+   *
+   * Lo decide el servidor leyendo `session.swc`, que `getSessionUser()` ha
+   * relecto de la **base de datos**, no de la cookie. Por eso el aviso no se
+   * puede falsear desde el cliente: si alguien edita su propia cookie, el
+   * servidor sigue viendo la columna y lo sigue enseñando.
+   *
+   * Es la **otra mitad** del mismo limite que aplica el `proxy`. El proxy pone el
+   * 403 en `/admin/*`; este aviso explica **por que**, porque sin el el panel se
+   * negaria en silencio y "obligatorio" seria una palabra sin contenido.
+   */
+  debeCambiarContrasena: boolean;
 };
 
 /**
@@ -40,6 +54,7 @@ export default function ProfileView({
   usuario,
   sesion,
   esAdmin,
+  debeCambiarContrasena,
 }: ProfileViewProps) {
   const router = useRouter();
 
@@ -174,6 +189,29 @@ export default function ProfileView({
             {usuario.email}
           </p>
         </header>
+
+        {/* --- Aviso de contrasena temporal (spec 007, D21) ---
+            Va **antes** de todo lo demas y con `role="alert"`, para que se lea al
+            entrar sin tener que buscarlo. No es un adorno: es la mitad que hace
+            falta para que el 403 del panel tenga explicacion. Sin este bloque, un
+            administrador recien creado ve el panel negarse y no sabe por que. */}
+        {debeCambiarContrasena ? (
+          <p
+            role="alert"
+            className="cartoon-border cartoon-shadow rounded-3xl bg-cartoon-coral p-6 text-foreground sm:p-8"
+          >
+            <strong className="block text-lg font-bold text-primary">
+              Tu contraseña es temporal
+            </strong>
+            <span className="mt-2 block text-sm">
+              La creó otra persona y te la dio para que entraras. Cámbiala aquí
+              abajo antes de hacer nada más.
+              {esAdmin
+                ? " Mientras no la cambies no podrás entrar al panel de administración."
+                : " Mientras no la cambies podrás entrar, pero no podrás hacer nada de tu cuenta."}
+            </span>
+          </p>
+        ) : null}
 
         {/* --- Nombre --- */}
         <section className="cartoon-border cartoon-shadow rounded-3xl bg-card p-6 sm:p-8">

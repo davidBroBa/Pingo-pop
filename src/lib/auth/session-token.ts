@@ -15,6 +15,23 @@ export type SessionPayload = {
   role: "BUYER" | "ADMIN";
   /** Version de sesion del usuario al emitirla. */
   sv: number;
+  /**
+   * `1` si la cuenta sigue con la **contrasena temporal** que le puso un
+   * administrador y todavia no la ha cambiado (spec 007, D21).
+   *
+   * Viaja **dentro del token firmado**, no en una cookie aparte, y por eso el
+   * `proxy` puede fiarse de el sin consultar la base de datos: el `proxy` corre en
+   * **Edge** y no tiene Prisma. Si alguien edita el valor a mano, la firma ya no
+   * cuadra y el token se rechaza; hay un test que lo comprueba.
+   *
+   * La **verdad** sigue estando en la base de datos: `getSessionUser()` relee
+   * `debeCambiarContrasena` y pisa este valor, igual que hace con el rol. La cookie
+   * da la decision rapida del `proxy`; la base de datos manda.
+   *
+   * Un `swc` ausente se interpreta como `0`, igual que `sv`, para que un
+   * despliegue no expulse a las cookies ya emitidas.
+   */
+  swc: number;
   /** Instante de emision, en milisegundos epoch. */
   iat: number;
   /** Instante de expiracion, en milisegundos epoch. */
@@ -214,10 +231,28 @@ export async function verifySession(token: string | undefined): Promise<SessionP
     sv = candidate.sv;
   }
 
+  // `swc` se valida **igual que `sv` y por el mismo motivo**: ausente vale 0
+  // (despliegue), presente pero no entero o negativo se rechaza (corrupto o
+  // manipulado). Copiar el patron en vez de inventar otro deja las dos reglas
+  // Parecidas, que es lo que hace que se entiendan juntas.
+  let swc: number;
+  if (candidate.swc === undefined) {
+    swc = 0;
+  } else if (
+    typeof candidate.swc !== "number" ||
+    !Number.isInteger(candidate.swc) ||
+    candidate.swc < 0
+  ) {
+    return null;
+  } else {
+    swc = candidate.swc;
+  }
+
   return {
     userId: candidate.userId,
     role: candidate.role,
     sv,
+    swc,
     iat: typeof candidate.iat === "number" ? candidate.iat : 0,
     exp: candidate.exp,
   };
@@ -243,18 +278,25 @@ export const SESSION_COOKIE = {
  * @param sessionVersion - `sessionVersion` del usuario, para poder revocar todas sus
  *   sesiones al cambiar la contrasena. Obligatorio a proposito: omitirlo en algun
  *   sitio emitiria una sesion que no se podria revocar nunca.
+ * @param swc - `1` si la cuenta sigue con la contrasena temporal (spec 007, D21).
+ *   **Obligatorio, sin valor por defecto**, y esa es la parte importante: con un
+ *   `swc = 0` por defecto, un sitio que se olvidara de pasarlo emitiria sesiones
+ *   sin limite en silencio, y ni el compilador ni un test lo dirian. Obligatorio,
+ *   el compilador obliga a cada llamador a decidir cual de los dos es.
  * @returns Payload listo para firmar.
  */
 export function buildSessionPayload(
   userId: number,
   role: "BUYER" | "ADMIN",
   sessionVersion: number,
+  swc: number,
 ): SessionPayload {
   const now = Date.now();
   return {
     userId,
     role,
     sv: sessionVersion,
+    swc,
     iat: now,
     exp: now + SESSION_TTL_MS,
   };

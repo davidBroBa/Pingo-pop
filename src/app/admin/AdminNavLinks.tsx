@@ -22,11 +22,16 @@ import Link from "next/link";
  * dias, despues lo que se usa cada pocos meses. Cotizaciones va la primera
  * porque es la unica via por la que entra trabajo, y Datos legales el ultimo
  * porque se escribe una vez y no se vuelve a tocar.
+ *
+ * `Cuentas` entra con su pagina en el mismo commit (spec 007), por el mismo motivo que
+ * los dos anteriores: publicar el enlace antes que la pagina seria repetir el fallo
+ * que este componente existe para evitar.
  */
 const PAGINAS = [
   { href: "/admin/cotizaciones", label: "Cotizaciones" },
   { href: "/admin/productos", label: "Productos" },
   { href: "/admin/categorias", label: "Categorías" },
+  { href: "/admin/usuarios", label: "Cuentas" },
   { href: "/admin/apariencia", label: "Apariencia" },
   { href: "/admin/legal", label: "Datos legales" },
 ] as const;

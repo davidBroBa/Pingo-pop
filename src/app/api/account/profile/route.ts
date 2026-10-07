@@ -44,7 +44,10 @@ export async function PATCH(request: Request): Promise<NextResponse> {
 
     return NextResponse.json({ ok: true, name: usuario.name });
   } catch (error) {
-    console.error("PATCH /api/account/profile: no se pudo guardar:", error);
+    console.error(
+      "PATCH /api/account/profile: no se pudo guardar:",
+      error instanceof Error ? error.message : String(error),
+    );
     return NextResponse.json(
       { error: "No se pudo guardar el perfil. Intenta de nuevo." },
       { status: 500 },

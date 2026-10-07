@@ -25,6 +25,24 @@ model User {
   // firmada como `sv` y se compara contra este valor al pedir datos, de modo que
   // cambiar la contrasena deja invalidas todas las sesiones (spec 006).
   sessionVersion Int @default(0)
+
+  // La cuenta **nace** con la contrasena que le puso un administrador y esta
+  // marcada para cambiarla (spec 007, D21). Se relee de la base de datos en
+  // `getSessionUser()`, igual que el rol: la cookie firmada lleva el distintivo
+  // para que el `proxy` decida rapido, y aqui manda la verdad.
+  //
+  // El `@default(false)` no es opcional: `STRICT_TRANS_TABLES` falla al anadir un
+  // `NOT NULL` sin defecto a una tabla que ya tiene filas.
+  debeCambiarContrasena Boolean @default(false)
+
+  // Desactivar en vez de borrar (spec 007, D23). Desactivar **tambien** incrementa
+  // `sessionVersion`, y por eso quita el acceso de verdad: toda cookie emitida
+  // antes queda en una version anterior.
+  //
+  // No hay ninguna relacion de `User` en el esquema, asi que borrar una fila no
+  // romperia nada tecnicamente. Aun asi esta spec **no borra cuentas**: se perderia
+  // el registro de que existieron, y no hay log de auditoria que lo reconstruya.
+  activo Boolean @default(true)
 }
 
 /**

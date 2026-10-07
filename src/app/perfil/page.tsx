@@ -59,6 +59,12 @@ export default async function PerfilPage() {
           caducaEn: new Date(session.exp).toISOString(),
         }}
         esAdmin={esAdmin}
+        /* La verdad es `session.swc`, que `getSessionUser()` acaba de releer de la
+           base de datos (spec 007). No se lee `usuario.debeCambiarContrasena` de
+           este `findUnique` a proposito: el `select` de arriba no lo pide, y
+           duplicar el dato en dos sitios invita a que se usen desparejados. La
+           sesion ya lo tiene y viene de la misma tabla. */
+        debeCambiarContrasena={session.swc === 1}
       />
     </MainLayout>
   );

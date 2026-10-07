@@ -13,6 +13,20 @@ const WINDOW_MS = 15 * 60 * 1000;
 /** Maximo de peticiones por clave dentro de la ventana. */
 const DEFAULT_MAX = 10;
 
+/**
+ * Limite de las lecturas publicas del catalogo (`GET /api/products` y
+ * `GET /api/categories`, RF-33).
+ *
+ * Es **alto y explicito**, y no el `DEFAULT_MAX`, por una razon concreta:
+ * `AdminProductsView.refresh()` llama a `GET /api/products` despues de cada
+ * escritura del panel, y con el limite por defecto el administrador se
+ * bloquearia a si mismo (plan 009, P10). Se acepta un tope mas alto a cambio
+ * de que el panel no dependa de que nadie recuerde una excepcion.
+ */
+export const MAX_LECTURAS_PUBLICAS = 120;
+
+export { DEFAULT_MAX };
+
 /** Numero maximo de claves vigiladas antes de purgar las caducadas. */
 const MAX_TRACKED_KEYS = 10_000;
 

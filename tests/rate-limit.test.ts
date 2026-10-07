@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { clientKey, consume, retryAfterSeconds } from "../src/lib/rate-limit";
+import { clientKey, consume, retryAfterSeconds, DEFAULT_MAX, MAX_LECTURAS_PUBLICAS } from "../src/lib/rate-limit";
 
 /**
  * El limitador mantiene el estado en un `Map` del modulo, asi que las pruebas
@@ -71,6 +71,27 @@ describe("limitador de peticiones", () => {
 
   it("devuelve 0 segundos cuando no hay cuota activa", () => {
     assert.equal(retryAfterSeconds("clave-que-nunca-se-uso"), 0);
+  });
+});
+
+describe("limite de lecturas publicas (RF-33, P10)", () => {
+  it("es explicito y NO es el limite por defecto", () => {
+    // El plan (P10) lo exige: `AdminProductsView.refresh()` llama a
+    // `GET /api/products` despues de cada escritura, y con `DEFAULT_MAX = 10` el
+    // panel de administracion se bloquearia a si mismo. El limite de lectura
+    // tiene que ser alto y con nombre, no el numero por defecto.
+    assert.ok(
+      MAX_LECTURAS_PUBLICAS > DEFAULT_MAX,
+      `esperaba MAX_LECTURAS_PUBLICAS > ${DEFAULT_MAX}, obtuve ${MAX_LECTURAS_PUBLICAS}`,
+    );
+  });
+
+  it("permite el cupo entero y rechaza el siguiente", () => {
+    const key = freshKey("lecturas");
+    for (let i = 0; i < MAX_LECTURAS_PUBLICAS; i += 1) {
+      assert.equal(consume(key, MAX_LECTURAS_PUBLICAS), true, `intento ${i + 1}`);
+    }
+    assert.equal(consume(key, MAX_LECTURAS_PUBLICAS), false);
   });
 });
 

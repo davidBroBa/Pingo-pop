@@ -82,6 +82,34 @@ versionado es [SemVer](https://semver.org/lang/es/).
 
 ### Añadido
 
+- **Siete documentos legales públicos** (spec `009-legal-compliance-privacy`): términos,
+  aviso de privacidad, política de cookies, envíos, cambios y devoluciones, información
+  legal y accesibilidad. Cada uno con versión, huella y fecha; ningún texto declara
+  cumplimiento de una norma, nombra un proveedor inexistente ni promete plazos que el
+  sistema no tiene. La política de cookies usa los mismos nombres de tecnología que el
+  código (`pp_session`, `pingo-quote-cart`), con aviso explícito de que la IP no se
+  persiste. Página `/accesibilidad` que explica el estándar objetivo y cómo reportar
+  fallos (RF-29/30/31). Datos del propietario interpolados con tokens, no escritos a
+  mano.
+- **Panel de preferencias de cookies, a demanda** (RF-15 a RF-18, D14):
+  **no hay banner automático**. El enlace "Preferencias de cookies" está siempre
+  visible en el pie y el panel solo se abre por acción del usuario; abrirlo no
+  escribe nada en `localStorage` (las tres vías solo guardan si se elige, y con
+  confirmación al cambiar una decisión). El panel es un diálogo modal accesible:
+  `role="dialog"` + `aria-modal`, foco inicial, Escape para cerrar y retorno de
+  foco al enlace que lo abrió.
+- **Rate limit en lecturas públicas** (RF-33): `GET /api/products` y
+  `GET /api/categories` limitados a **120 peticiones por ventana e IP** — tope
+  explícito, más alto que el límite por defecto, para que la vista de
+  administración que refresca datos no se auto-bloquee. Superado el cupo:
+  `429` con `retry-after` y cabeceras de límite (RF-32).
+- **Auditoría de accesibilidad** (`docs/ACCESSIBILITY.md`): skip-link
+  "Saltar al contenido" en `MainLayout` (WCAG 2.4.1), Escape y retorno de foco
+  del panel de consentimiento (patrón de diálogo APG), contraste del botón
+  "Elegir archivo" del panel de productos. Sin claim de conformidad AA; los
+  hallazgos pendientes (hover `text-accent`, focus trap completo) quedan
+  documentados con su gravedad.
+
 - **El administrador puede subir la foto del hero** (spec `008-site-and-category-images`).
   Estaba escrito a mano en el componente (`Hero.tsx`), sin ninguna prop: la foto
   **no existía como concepto** en el proyecto, porque `schema.prisma` no tenía

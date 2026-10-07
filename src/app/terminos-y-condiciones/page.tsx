@@ -15,9 +15,9 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Términos y condiciones | Pingo POP",
   description:
-    "Condiciones de uso del sitio de Pingo POP: qué es este negocio, qué se puede pedir, cómo se cierra una venta y qué se acepta al solicitar una cotización.",
+    "Condiciones de uso del sitio, obligaciones de las partes, limitacion de responsabilidad y resolucion de controversias.",
 };
 
-export default function TerminosPage() {
+export default function TerminPage() {
   return <LegalPage slug="terminos-y-condiciones" />;
 }

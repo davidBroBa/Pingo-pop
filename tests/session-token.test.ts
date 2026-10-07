@@ -5,6 +5,7 @@ import {
   buildSessionPayload,
   signSession,
   verifySession,
+  type SessionPayload,
 } from "../src/lib/auth/session-token";
 
 /**
@@ -15,7 +16,7 @@ process.env.SESSION_SECRET = "secreto-de-prueba-de-32-caracteres-minimo!!";
 
 /** Token de administrador valido, reutilizado por varias pruebas. */
 async function adminToken(): Promise<string> {
-  return signSession(buildSessionPayload(1, "ADMIN", 0));
+  return signSession(buildSessionPayload(1, "ADMIN", 0, 0));
 }
 
 describe("firma de sesion", () => {
@@ -88,6 +89,7 @@ describe("firma de sesion", () => {
       userId: 7,
       role: "BUYER",
       sv: 0,
+      swc: 0,
       iat: Date.now() - 10_000,
       exp: Date.now() - 1,
     });
@@ -101,6 +103,7 @@ describe("firma de sesion", () => {
       userId: 1,
       role: "ROOT" as "BUYER",
       sv: 0,
+      swc: 0,
       iat: Date.now(),
       exp: Date.now() + 60_000,
     });
@@ -112,6 +115,7 @@ describe("firma de sesion", () => {
       userId: 1.5,
       role: "ADMIN",
       sv: 0,
+      swc: 0,
       iat: Date.now(),
       exp: Date.now() + 60_000,
     });
@@ -123,7 +127,7 @@ describe("firma de sesion", () => {
     delete process.env.SESSION_SECRET;
     try {
       await assert.rejects(() =>
-        signSession(buildSessionPayload(1, "ADMIN", 0)),
+        signSession(buildSessionPayload(1, "ADMIN", 0, 0)),
       );
     } finally {
       process.env.SESSION_SECRET = original;
@@ -135,7 +139,7 @@ describe("firma de sesion", () => {
     process.env.SESSION_SECRET = "corto";
     try {
       await assert.rejects(() =>
-        signSession(buildSessionPayload(1, "ADMIN", 0)),
+        signSession(buildSessionPayload(1, "ADMIN", 0, 0)),
       );
     } finally {
       process.env.SESSION_SECRET = original;
@@ -163,7 +167,7 @@ describe("firma de sesion", () => {
  */
 describe("version de sesion (sv)", () => {
   it("viaja en el payload tal cual se le pasa", async () => {
-    const token = await signSession(buildSessionPayload(3, "BUYER", 4));
+    const token = await signSession(buildSessionPayload(3, "BUYER", 4, 0));
     const session = await verifySession(token);
     assert.ok(session !== null);
     assert.equal(session.sv, 4);
@@ -215,5 +219,107 @@ describe("version de sesion (sv)", () => {
       exp: Date.now() + 60_000,
     } as unknown as Parameters<typeof signSession>[0]);
     assert.equal(await verifySession(token), null);
+  });
+});
+
+/**
+ * `swc` — "session wants change" (spec 007, D21/D24).
+ *
+ * El distintivo de que la cuenta **todavia no ha cambiado** la contraseña temporal
+ * que le puso un administrador. Viaja **dentro del token firmado**, y por eso el
+ * `proxy` puede fiarse de el sin consultar la base de datos: si alguien edita el
+ * valor a mano, la firma ya no cuadra.
+ *
+ * El token va firmado porque el `proxy` corre en **Edge**: no tiene Prisma y no
+ * puede preguntar al usuario si la contraseña sigue siendo temporal. La cookie le
+ * da la decision rapida; `getSessionUser()` relee la base de datos y manda.
+ */
+describe("swc: la sesion con contrasena temporal", () => {
+  /**
+   * Firma un payload **sin** `swc`, imitando una cookie emitida antes de que
+   * existiera el campo.
+   *
+   * El `as` es deliberado y es **el punto**: `SessionPayload.swc` es obligatorio,
+   * asi que la unica forma de construir un payload sin el es mentirle al
+   * compilador. Y mentirle es exactamente lo que hacia un despliegue: firmaba
+   * cookies sin `swc` sin saberlo. Si aqui el campo fuera opcional, el
+   * compilador no quejaria y este test no tendria nada que comprobar.
+   */
+  async function tokenSinSwc(): Promise<string> {
+    const sinSwc = {
+      userId: 1,
+      role: "ADMIN",
+      sv: 0,
+      iat: Date.now(),
+      exp: Date.now() + 60_000,
+    };
+    return signSession(sinSwc as SessionPayload);
+  }
+
+  it("buildSessionPayload firma el distintivo", async () => {
+    const token = await signSession(buildSessionPayload(1, "ADMIN", 0, 1));
+    const session = await verifySession(token);
+    assert.ok(session !== null);
+    assert.equal(session.swc, 1);
+  });
+
+  it("una sesion normal lleva swc 0", async () => {
+    const token = await signSession(buildSessionPayload(1, "ADMIN", 0, 0));
+    const session = await verifySession(token);
+    assert.ok(session !== null);
+    assert.equal(session.swc, 0);
+  });
+
+  it("swc AUSENTE se verifica como 0, y no se rechaza", async () => {
+    // El caso del despliegue: hay cookies vivas firmadas antes de que existiera
+    // este campo. Si se rechazaran, el despliegue cerraria el panel a todo el
+    // mundo de golpe. Es el mismo motivo por el que `sv` ausente vale 0, y esta
+    // asercion es la que protege esa decision.
+    const session = await verifySession(await tokenSinSwc());
+    assert.ok(session !== null, "un token sin swc debe seguir siendo valido");
+    assert.equal(session.swc, 0);
+  });
+
+  it("un swc negativo o no entero se rechaza, igual que sv", async () => {
+    // Si el `proxy` trata el valor como booleano, un -1 o un 1.5 que se colaran
+    // darian un comportamiento raro. Se validan en el mismo sitio que `sv`, y
+    // `verifySession` devuelve `null` en vez de lanzar: ese es su contrato.
+    for (const malo of [-1, 1.5]) {
+      const token = await signSession({
+        userId: 1,
+        role: "ADMIN",
+        sv: 0,
+        swc: malo,
+        iat: Date.now(),
+        exp: Date.now() + 60_000,
+      });
+      assert.equal(
+        await verifySession(token),
+        null,
+        `un swc de ${malo} deberia rechazarse`,
+      );
+    }
+  });
+
+  it("un swc editado a mano NO verifica: el token va firmado", async () => {
+    // Si esto pasara, cualquiera podria quitarse el limite de la sesion
+    // reescribiendo su propia cookie. El HMAC es lo que hace que el `proxy` pueda
+    // creerlo sin base de datos.
+    const token = await signSession(buildSessionPayload(1, "ADMIN", 0, 1));
+    const partes = token.split(".");
+    const payload = JSON.parse(
+      Buffer.from(partes[0] as string, "base64url").toString("utf8"),
+    ) as Record<string, unknown>;
+    payload.swc = 0;
+
+    const falsificado = `${Buffer.from(JSON.stringify(payload), "utf8").toString(
+      "base64url",
+    )}.${partes[1] as string}`;
+
+    assert.equal(
+      await verifySession(falsificado),
+      null,
+      "una cookie con la firma old y el payload cambiado no debe validar",
+    );
   });
 });

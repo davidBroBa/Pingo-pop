@@ -61,21 +61,32 @@ export async function POST(request: Request): Promise<NextResponse> {
     passwordHash: string;
     role: "BUYER" | "ADMIN";
     sessionVersion: number;
+    debeCambiarContrasena: boolean;
+    activo: boolean;
   } | null;
   try {
     user = await prisma.user.findUnique({
       where: { email },
       // `sessionVersion` viaja en la cookie firmada: es lo que permite revocar todas
       // las sesiones al cambiar la contrasena (spec 006).
+      //
+      // `debeCambiarContrasena` y `activo` **no son una consulta extra**: ya se
+      // estaba leyendo la fila para verificar el hash, asi que leer dos columnas
+      // mas no cuesta nada.
       select: {
         id: true,
         passwordHash: true,
         role: true,
         sessionVersion: true,
+        debeCambiarContrasena: true,
+        activo: true,
       },
     });
   } catch (error) {
-    console.error("POST /api/auth/login: no se pudo leer el usuario:", error);
+    console.error(
+      "POST /api/auth/login: no se pudo leer el usuario:",
+      error instanceof Error ? error.message : String(error),
+    );
     return NextResponse.json(
       { error: "Servicio no disponible. Intenta de nuevo en unos minutos." },
       { status: 503, headers: { "Retry-After": "30" } },
@@ -93,8 +104,29 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Credenciales invalidas" }, { status: 401 });
   }
 
+  /**
+   * Una cuenta desactivada **no entra** (spec 007, RF-8).
+   *
+   * Y responde **el mismo 401 con el mismo texto** que una contrasena incorrecta, y
+   * se comprueba **despues** de `verifyPassword`. Si se comprobara antes, el tiempo
+   * de respuesta distinguiria "desactivada" de "existe pero otra contrasena", que es
+   * justo la enumeracion de cuentas que el 401 identico de este endpoint existe para
+   * impedir. Aqui la comprobacion va tarde a proposito: primero se verifica la
+   * contrasena, y solo si es correcta se mira si la cuenta puede entrar.
+   */
+  if (!user.activo) {
+    return NextResponse.json({ error: "Credenciales invalidas" }, { status: 401 });
+  }
+
   const token = await signSession(
-    buildSessionPayload(user.id, user.role, user.sessionVersion),
+    // El distintivo viaja **dentro** del token firmado (spec 007, D24): el `proxy`
+    // corre en Edge y no tiene Prisma, asi que no tiene otro sitio donde mirar.
+    buildSessionPayload(
+      user.id,
+      user.role,
+      user.sessionVersion,
+      user.debeCambiarContrasena ? 1 : 0,
+    ),
   );
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE.name, token, {

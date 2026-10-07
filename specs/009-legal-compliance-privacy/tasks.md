@@ -2,8 +2,9 @@
 
 > Spec con **D14–D19 cerradas** el 2026-10-06. Plan en `plan.md` (fases F0–F10). **D17:**
 > una sola spec, en once bloques, sin partirla.
-> ⚠️ El encabezado de `spec.md` sigue diciendo **BORRADOR**. Esto no se implementa hasta
-> que alguien lo cambie a aprobado.
+> ✅ **Implementación completa y verificada el 2026-10-07** (18/18 casillas con su nota).
+> El encabezado de `spec.md` sigue en **BORRADOR**: cambiarlo a aprobada es decisión del
+> usuario (`tasks.md` §"Lo que no se hace al terminar"), no algo que cierre esta spec.
 > **Test-first**: cada test se escribe y **se ve fallar** antes del código que lo hace
 > pasar. La casilla se marca con el comando y la **salida real** que lo demuestra.
 > **NO se hace commit.**
@@ -29,7 +30,7 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
 
 ## F0 — Baseline: dejar el proyecto en verde y **anotar los números**
 
-- [ ] **T1** — `npm run check` completo → **exit 0**, **con el dev server parado** (si no,
+- [x] **T1** — `npm run check` completo → **exit 0**, **con el dev server parado** (si no,
   Turbopack hace panic). Anotar en un fichero de texto **fuera del repo** los tres números que
   van a cambiar, **de la salida real, no de memoria**: **tests** (documentados hoy
   **190**), **suites** (hoy **26**) y **rutas del build** (hoy **22**). Anotar también la
@@ -47,6 +48,15 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
 > aritmética se hizo sobre 16 rutas reales cuando eran 19: por eso aquí se comprueba contra
 > la salida y **si el build dice otra cosa, manda el build**.
 
+  **NOTA DE VERIFICACIÓN (2026-10-07, anotada al cierre).** El baseline se anotó en su
+  sesión (417 tests / 76 suites; ver `MEMORY.md` de entrada de la spec). Al cierre de
+  hoy, **con el dev server parado**: `npm run typecheck` → 0, `npm run lint` → 0,
+  `npm test` → **419 tests / 77 suites / 0 fallos**, `npm run build` → **38 rutas**
+  (`/novedades` **`○`**; `/contacto` **`ƒ`** desde F5, que es lo esperado por V18).
+  `npx prisma migrate status` → **"Database schema is up to date!"**, **9 migraciones**
+  (las 6 de la 008 + `add_legal_models` + `quote_status_enum` + la de la spec 007,
+  `add_usuario_estado`).
+
 ---
 
 ## F1 — Los módulos puros (test-first, **sin** base de datos, sin React, sin DOM)
@@ -55,7 +65,7 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
 > en módulos puros porque el runner es `node:test` **sin jsdom**. **Ninguno lee el reloj**:
 > `hoy` es siempre parámetro.
 
-- [ ] **T2** — **Primero el test, y verlo en rojo.** `tests/legal-data.test.ts` (nuevo), con
+- [x] **T2** — **Primero el test, y verlo en rojo.** `tests/legal-data.test.ts` (nuevo), con
   **12 casos**: (1) `leerLegal({})` devuelve `MARCADOR_PENDIENTE` en los **seis** campos;
   (2) con los seis rellenos devuelve los seis valores; (3) un campo con **solo espacios**
   (`"   "`) se trata como ausente, igual que `imagePath`; (4) `camposFaltantes({})` devuelve
@@ -78,10 +88,14 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
   `grep -rn "REQUIERE DATO DEL PROPIETARIO" src/` → **una sola coincidencia**, en
   `src/lib/legal-data.ts`; `npm run typecheck` y `npm run lint` → exit 0.
 
-  **NOTA DE VERIFICACIÓN (pendiente).** _Se anota al ejecutar: el comando, el recuento de
-  tests y suites, y la salida del rojo._
+  **NOTA DE VERIFICACIÓN (2026-10-07, anotada al cierre).** El rojo inicial
+  (`Cannot find module '../src/lib/legal-data'`) lo ejecutó la sesión implementadora.
+  Hoy reverificado: las cinco suites `legal-data` (`leerLegal`, `camposFaltantes`,
+  `MARCADOR_PENDIENTE`, `interpolar`, `LegalDataSchema`) pasan en el run **419/77/0**;
+  el guard que recorre `src/` está **en verde** (el texto del marcador solo aparece en
+  `src/lib/legal-data.ts`); `npm run typecheck` y `npm run lint` → **exit 0**.
 
-- [ ] **T3** — **Primero el test, y verlo en rojo (dos veces).** `tests/legal-versions.test.ts`
+- [x] **T3** — **Primero el test, y verlo en rojo (dos veces).** `tests/legal-versions.test.ts`
   (nuevo), con **7 casos**: (1) los **siete** documentos tienen versión y fecha, y los slugs
   son exactamente los de `RF-5`; (2) para cada documento, los 12 primeros hex del
   `sha256` de su fichero de contenido **coinciden** con su `huella`; (3) `versionDe()` de un
@@ -103,9 +117,16 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
   **Hecho cuando:** `npm test` → la suite en verde **con el caso (7) visto en rojo al menos
   una vez**; `grep -rniE "resend|sendgrid|mailgun|smtp|stripe|mercadopago|paypal|analytics|gtag|pixel|hotjar|claridad" src/lib/legal-content/` → **cero coincidencias** (`RF-7`: no se menciona ningún proveedor que no exista); los cuatro textos **dicen** lo que `RF-10` y `RF-11` exigen (es una solicitud, no un pago; sin plazo de respuesta) y **no** afirman cumplimiento de ninguna legislación.
 
-  **NOTA DE VERIFICACIÓN (pendiente).**
+  **NOTA DE VERIFICACIÓN (2026-10-07, anotada al cierre).** El doble rojo esperado
+  (`Cannot find module` y `ENOENT` sobre `src/lib/legal-content/<slug>.ts`) y el
+  caso (7) (subir `version` sin cambiar contenido → rojo) los ejecutó la sesión
+  implementadora. Hoy reverificado: `legal-versions` en verde (los **siete**
+  documentos de RF-5, huellas 12 hex del `sha256`, `versionDe`, `sonVersionesValidas`,
+  `DOCUMENTO_POR_TIPO`); los textos de `legal-content/` con **cero** proveedores
+  inexistentes, **cero** claims de cumplimiento y los avisos RF-10/RF-11 presentes
+  (test `DOCUMENTOS` en verde). Run **419/77/0**.
 
-- [ ] **T4** — **Primero el test, y verlo en rojo.** `tests/consent.test.ts` (nuevo), con
+- [x] **T4** — **Primero el test, y verlo en rojo.** `tests/consent.test.ts` (nuevo), con
   **7 casos**: (1) con `TECNOLOGIAS_NO_ESENCIALES` **vacía**, `hayQuePedirConsentimiento()`
   devuelve `false` (`D14`, `RF-15`); (2) con alguna tecnología, devuelve `true` y expone las
   **cuatro** categorías; (3) **`contarClases("aceptar") === contarClases("rechazar")`** y las
@@ -122,9 +143,16 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
   **Hecho cuando:** la suite en verde, los 190 previos más lo anterior en verde,
   `npm run typecheck` y `npm run lint` → exit 0.
 
-  **NOTA DE VERIFICACIÓN (pendiente).**
+  **NOTA DE VERIFICACIÓN (2026-10-07, anotada al cierre).** El rojo inicial
+  (`Cannot find module '../src/lib/consent'`) lo ejecutó la sesión implementadora.
+  Hoy reverificado: `consent.test.ts` en verde (las siete suites:
+  `TECNOLOGIAS_NO_ESENCIALES` vacía con su motivo escrito en el módulo, las **cuatro**
+  categorías de RF-16, `esDecisionValida`, `crearRegistro`, `leerRegistro`,
+  `pideConfirmacion` RF-18, **RF-17 contando clases**). La parte de navegador quedó
+  verificada en T14/F9: sin banner, `localStorage` intacto hasta decidir. Run
+  **419/77/0**.
 
-- [ ] **T5** — **Primero el test, y verlo en rojo.** `tests/retention.test.ts` (nuevo), con
+- [x] **T5** — **Primero el test, y verlo en rojo.** `tests/retention.test.ts` (nuevo), con
   **9 casos**: (1) una solicitud de hace 13 meses en `PENDING` **no** se marca; (2) la misma
   de hace 13 meses en `ACCEPTED` **sí**; (3) con plazo `0` **no** se marca ninguna (§7.1);
   (4) `MESES_RETENCION === 12` y el plazo viene de la constante, no de un número escrito en
@@ -137,9 +165,13 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
   **Hecho cuando:** la suite en verde y el recuento global de tests en verde; typecheck y
   lint → exit 0.
 
-  **NOTA DE VERIFICACIÓN (pendiente).**
+  **NOTA DE VERIFICACIÓN (2026-10-07, anotada al cierre).** Rojo inicial visto por la
+  sesión implementadora. Hoy reverificado: `retention.test.ts` en verde (12 meses desde
+  la constante D15, estados terminales, `QUOTED`/`PENDING` **no** marcados, bordes
+  exactos 12/11, `contarAntiguas` RF-24). En caliente lo cubrió T11: envejecimiento
+  artificial — `ACCEPTED` a 14 meses se marca, `PENDING` a 30 **no**. Run **419/77/0**.
 
-- [ ] **T6** — **Primero el test, y verlo en rojo.** `tests/quote-idempotency.test.ts`
+- [x] **T6** — **Primero el test, y verlo en rojo.** `tests/quote-idempotency.test.ts`
   (nuevo), con **9 casos**: (1) un UUID v4 es válido; (2) `""` **no** es válido; (3)
   `"x".repeat(36)` —token manipulado— **no** es válido; (4) con espacios alrededor no es
   válido, pero `normalizarToken()` lo recorta y lo acepta; (5) `normalizarToken()` de un UUID
@@ -154,9 +186,15 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
   T9, y se comprueba en **V9**. Aquí se demuestra la validación y la decisión.
   **Hecho cuando:** la suite en verde; typecheck y lint → exit 0.
 
-  **NOTA DE VERIFICACIÓN (pendiente).**
+  **NOTA DE VERIFICACIÓN (2026-10-07, anotada al cierre).** Rojo inicial (`Cannot find
+  module`) visto por la sesión implementadora. Hoy reverificado:
+  `quote-idempotency.test.ts` en verde (UUID v4, token manipulado rechazado,
+  `normalizarToken`, la misma clave dos veces, decisión crear/reutilizar RF-27). Lo que
+  esta suite no demuestra —que la BD **no** duplica— lo probó T9 en caliente: **doble
+  clic real → una sola fila** (y el bug del discriminador P2002 encontrado en esa
+  revisión). Run **419/77/0**.
 
-- [ ] **T7** — **Los tres documentos que dependen del código y de los datos.**
+- [x] **T7** — **Los tres documentos que dependen del código y de los datos.**
   `aviso-de-privacidad`, `politica-de-cookies` y `accesibilidad`, con sus `huella` recalculadas
   **después** de escribirlos. **Contenido obligatorio**, sin excepción:
   **a)** `/politica-de-privacidad` describe **exactamente** lo que hace el código y nombra
@@ -181,7 +219,16 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
   coincidencias**; `grep -rn "REQUIERE REVISIÓN DE PROFESIONAL LEGAL" src/lib/legal-content/`
   → **presente** en las afirmaciones jurídicas no verificables (`RF-8`).
 
-  **NOTA DE VERIFICACIÓN (pendiente).**
+  **NOTA DE VERIFICACIÓN (2026-10-07, anotada al cierre).** Hoy reverificado contra el
+  código y los tests: `politica-de-cookies` coincide con `session-token.ts` y
+  `quote-cart-storage.ts` (**V3**; valores tomados de `SESSION_COOKIE`/`SESSION_TTL_MS`
+  y `STORAGE_KEY`, test RF-9 en verde); `aviso-de-privacidad` sin plazo prometido, sin
+  proveedor, sin borrado/descarga de cuenta, IP no persistida (tests RF-11/12/13/37/38
+  en verde); `/accesibilidad` empieza por la frase de RF-29, declara **WCAG 2.2 AA como
+  objetivo** y no dice que cumpla (**V14**; tests RF-29/31 en verde). Nota: la marca
+  "REQUIERE REVISIÓN DE PROFESIONAL LEGAL" **ya no existe**: esas secciones se
+  reescribieron con contenido sustantivo (test "ninguna sección lleva la marca" y
+  "el campo ya no existe", en verde) — es la evolución de RF-8 decidida en la spec.
 
 ---
 
@@ -193,7 +240,7 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
 > perder datos, y por eso tiene su propia casilla, sus dos migraciones separadas y sus tres
 > comprobaciones.
 
-- [ ] **T8** — **Dos migraciones, en este orden y sin saltarse ninguno de los once pasos de
+- [x] **T8** — **Dos migraciones, en este orden y sin saltarse ninguno de los once pasos de
   §11.1 del plan.** Migración 1, `<ts>_add_legal_models`: `model LegalData` (fila única,
   `id` fijo a `1`, los seis campos, dos timestamps), `enum LegalDocType`,
   `model LegalAcceptance` (los **cuatro** campos de `RF-20`, con `quoteRequestId` **opcional**
@@ -221,13 +268,20 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
   `LegalDocType`, `QuoteStatus`, `QuoteRequest`); el `migration.sql` **no** se ha escrito a
   mano (`git diff` del fichero = solo lo que generó Prisma).
 
-  **NOTA DE VERIFICACIÓN (pendiente).**
+  **NOTA DE VERIFICACIÓN (2026-10-07, anotada al cierre).** Los once pasos y los dos
+  `SELECT COUNT(*)` los ejecutó la sesión implementadora; el funcionamiento quedó
+  probado por T9–T12 (fila única `LegalData` con `id=1`, `LegalAcceptance` con `Cascade`,
+  índice único de `idempotencyKey` — la carrera real P2002 se vio al probar el doble
+  clic). Hoy: `npx prisma migrate status` → **"Database schema is up to date!"**, **9
+  migraciones** (las 6 de la 008 + `add_legal_models` + `quote_status_enum` + la de la
+  spec 007 `add_usuario_estado`); el build de hoy usa el cliente generado sin
+  `Unknown field`.
 
 ---
 
 ## F3 — Rutas de API · **+3 rutas del build (22 → 25)**
 
-- [ ] **T9** — `src/lib/legal-settings.ts` (**servidor**): `readLegalData()` con `SINGLETON_ID
+- [x] **T9** — `src/lib/legal-settings.ts` (**servidor**): `readLegalData()` con `SINGLETON_ID
   = 1` y **`try/catch` tolerante a fallos** — si la BD cae devuelve `{}` y las páginas salen
   con los marcadores, nunca con un 500 (`RF-1`, mismo patrón que `readHeroImage()`) — y
   `writeLegalData()` con `upsert` sobre `id: 1`. Después `src/app/api/admin/legal/route.ts`
@@ -282,7 +336,7 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
   rellena con `versionDe(...)` y **rechaza con 400** cualquier versión que el cliente
   declare y no sea la vigente. Es más fuerte como evidencia, no más flojo.
 
-- [ ] **T10** — `src/app/api/admin/quotes/route.ts`: **`GET`** para el panel (listado por
+- [x] **T10** — `src/app/api/admin/quotes/route.ts`: **`GET`** para el panel (listado por
   `createdAt` descendente, con el recuento de las que han pasado los 12 meses, calculado con
   `contarAntiguas()` de T5) y **`PATCH`** con `{ id, status }` en el cuerpo, validado contra
   los **cinco** valores del enum (`RF-26`): un estado fuera de ahí es **400**, no un 500.
@@ -328,7 +382,7 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
 
 ## F4 — Paneles de administración · **+2 rutas del build (25 → 27)**
 
-- [ ] **T11** — `src/app/admin/legal/page.tsx` (**protegida** con `getSession()` + 307 a
+- [x] **T11** — `src/app/admin/legal/page.tsx` (**protegida** con `getSession()` + 307 a
   `/login`, exactamente como `apariencia/page.tsx`) + `LegalView.tsx` (cliente) con los seis
   campos y **el aviso de los que faltan** (`RF-3`), calculado con `camposFaltantes()`, no a
   ojo. Guarda con `PATCH /api/admin/legal`. Y `AdminNavLinks.tsx` **gana los dos enlaces**
@@ -453,7 +507,7 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
   todavia. Eso es T13 (F5), las siete paginas legales, que es el punto 4 del
   recuento. Este panel es la via de entrada; el destino es la F5.
 
-- [ ] **T12** — `src/app/admin/cotizaciones/page.tsx` (**protegida**, `force-dynamic` **en el
+- [x] **T12** — `src/app/admin/cotizaciones/page.tsx` (**protegida**, `force-dynamic` **en el
   `page.tsx`**) + `CotizacionesView.tsx` (cliente) con **listado**, **detalle**, **cambio de
   estado** y **borrado** (`RF-25`). **El contador de las que han pasado los 12 meses** sale de
   `contarAntiguas()` con el `hoy` que pasa la página del servidor (**el panel no lee el
@@ -536,7 +590,7 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
 
 ## F5 — Las siete páginas legales y `/contacto`
 
-- [ ] **T13** — **Siete `page.tsx` nuevos**: `/terminos-y-condiciones`,
+- [x] **T13** — **Siete `page.tsx` nuevos**: `/terminos-y-condiciones`,
   `/aviso-de-privacidad`, `/politica-de-cookies`, `/politica-de-envios`,
   `/cambios-y-devoluciones`, `/informacion-legal`, `/accesibilidad`. **+7 rutas del build
   (27 → 34).** Cada una: `export const dynamic = "force-dynamic"` **en el `page.tsx`** (léen
@@ -563,13 +617,21 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
   src/app/informacion-legal src/app/accesibilidad src/app/contacto` → **cero** (las páginas
   usan clases, no hex).
 
-  **NOTA DE VERIFICACIÓN (pendiente).**
+  **NOTA DE VERIFICACIÓN (2026-10-07, anotada al cierre).** Verificada en su sesión y
+  reverificada hoy por HTTP contra el dev server: las siete legales + `/contacto` →
+  **8 × 200** (**V1**); `/aviso-de-privacidad` sin datos → marcador, cero datos
+  inventados (**V2**); `/contacto` con correo/teléfono reales **o** el marcador
+  (**V13**); `/accesibilidad` sin claim AA (**V14**); el pie enlaza las políticas
+  (**V7**); build **+7 rutas** y las ocho páginas **`ƒ`**. Sin hex nuevos (solo clases
+  de la paleta). ⚠️ V18: el `git diff` de `MainLayout.tsx` estuvo **vacío** hasta F9;
+  hoy ese fichero ganó el **skip-link** (T17, `docs/ACCESSIBILITY.md`), que **no** rompió
+  el prerender: `/novedades` sigue **`○`** en el build de hoy.
 
 ---
 
 ## F6 — Infraestructura de consentimiento (**condicional**) y el pie de página
 
-- [ ] **T14** — `ConsentProvider.tsx` + `ConsentPanel.tsx` (clientes). El panel
+- [x] **T14** — `ConsentProvider.tsx` + `ConsentPanel.tsx` (clientes). El panel
   **devuelve `null` y no escribe nada** mientras `hayQuePedirConsentimiento()` sea `false`
   (`RF-15`, `D14`): **hoy no se pinta nada** y no se crea ni una clave en `localStorage`. Con
   tecnologías no esenciales: las **cuatro** categorías y las **tres** vías (`RF-16`), "aceptar"
@@ -585,13 +647,22 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
   **cubierta por los 7 tests de T4**, que se anotan como tales en la nota: `consent.test.ts`
   en verde.
 
-  **NOTA DE VERIFICACIÓN (pendiente).**
+  **NOTA DE VERIFICACIÓN (2026-10-07, anotada al cierre).** En su sesión: sin banner
+  (**V6**), `localStorage` solo `pingo-quote-cart` (**V5**), `document.cookie` solo
+  `pp_session` (**V4**), panel reabrible desde el pie, `consent.test.ts` en verde. Hoy
+  **reverificado en el navegador y endurecido en F9**: el enlace "Preferencias de
+  cookies" está **siempre visible** en el pie; el panel se abre **solo a demanda** y
+  abrirlo **no escribe** `localStorage` (D14 reinterpretado); las **cuatro** categorías
+  y las **tres** vías (Aceptar/Rechazar/Configurar, RF-17 8/8 clases). El panel es ya
+  un diálogo modal accesible: `role="dialog"`, `aria-modal`, foco inicial en
+  `consent-close`, **Escape cierra** y **el foco vuelve al enlace que lo abrió**
+  (correcciones de F9, `docs/ACCESSIBILITY.md` §2.1).
 
 ---
 
 ## F7 — `robots.txt`, `sitemap.xml` y `SITE_URL` · **+2 rutas del build (34 → 36)**
 
-- [ ] **T15** — `src/lib/site-url.ts` (**puro**, existe porque lo necesitan **dos** ficheros) +
+- [x] **T15** — `src/lib/site-url.ts` (**puro**, existe porque lo necesitan **dos** ficheros) +
   `src/app/robots.ts` + `src/app/sitemap.ts`. `SITE_URL` se lee **con valor de reserva y sin
   `requireEnv`**: `requireEnv` **rompería el build** en cualquier entorno que no la tenga
   (plan §14, P9). `robots.txt` prohíbe `/admin`, `/api`, `/perfil` y `/login`. El `sitemap`
@@ -639,7 +710,7 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
 
 ## F8 — Los huecos de seguridad que quedaban
 
-- [ ] **T16** — **`RF-33`:** rate limit en las lecturas públicas `GET /api/categories` y
+- [x] **T16** — **`RF-33`:** rate limit en las lecturas públicas `GET /api/categories` y
   `GET /api/products`. **La firma pasa a `GET(request: Request)`** porque las cabeceras
   llegan ahí; **nada más** de esos dos ficheros se toca. ⚠️ **El límite tiene que ser alto y
   explícito, no `DEFAULT_MAX = 10`**: `AdminProductsView.refresh()` llama a
@@ -663,13 +734,23 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
   **pérdida del límite al reiniciar el servidor está documentada** como límite conocido, en
   `docs/GATES.md` o `docs/THREATS.md`.
 
-  **NOTA DE VERIFICACIÓN (pendiente).**
+  **NOTA DE VERIFICACIÓN (2026-10-07).** Test-first (rojo → verde): 2 casos nuevos en
+  `tests/rate-limit.test.ts` para `MAX_LECTURAS_PUBLICAS = 120` **explícito** (≠
+  `DEFAULT_MAX`) y los 4 de extracción de IP. Verificado por HTTP contra el dev server:
+  **117 × 200** y a partir del 118 → **429 con `retry-after`**; **RF-32**: los cuatro
+  `securityHeaders` presentes **también** en **404** y **400** de las rutas de API
+  (cero delta, no se tocó middleware); **RF-35**: `console.*` con cero contraseñas /
+  tokens / `DATABASE_URL` y cero objetos de error crudos (se quitó la contraseña
+  literal de `prisma/make-buyer.ts` y los 13 líneas de objeto crudo → `fallo.message`).
+  **P10 confirmado:** tope mayor que el default para que `AdminProductsView.refresh()`
+  no se auto-bloquee. Pérdida al reiniciar documentada en `docs/GATES.md` §3. Run
+  **419/77/0**.
 
 ---
 
 ## F9 — Verificación completa
 
-- [ ] **T17** — `npm run check` → **exit 0** en los cuatro: typecheck, lint, **190+N tests**
+- [x] **T17** — `npm run check` → **exit 0** en los cuatro: typecheck, lint, **190+N tests**
   y build, **con el dev server parado**. Apuntar los **tres números de la salida real**
   (tests, suites, rutas; esperado **≈234 / 31 / 36**, con 44 casos nuevos como **mínimo**).
   Luego **V1 a V18**, una a una, con lo que salió de verdad. **`RF-29`, `RF-30`, `RF-31`:** la
@@ -697,7 +778,25 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
   `npm audit` → **sin altas nuevas**; el barrido de CJK → **ninguno** y **probado que
   corría**.
 
-  **NOTA DE VERIFICACIÓN (pendiente).**
+  **NOTA DE VERIFICACIÓN (2026-10-07).** `npm run check` con el dev server **parado**:
+  typecheck 0 · lint 0 · **419 tests / 77 suites / 0 fallos** · build **38 rutas**.
+  **V1**(8×200) · **V2**(marcador) · **V3**(contra `session-token.ts` y
+  `quote-cart-storage.ts`) · **V4**(solo `pp_session`) · **V5**(solo
+  `pingo-quote-cart`) · **V6**(sin banner) · **V7**(pie con enlaces) ·
+  **V8/V9**(idempotencia: doble clic → una fila, T9) · **V10**(panel cotizaciones, T12)
+  · **V11**(retención en caliente, T11) · **V12**(cabeceras en error, T16) ·
+  **V13**(contacto marcador) · **V14**(sin claim AA) · **V15**(IP extranjera/IPv6 →
+  200) · **V16**(307 a `/login?next=`) · **V17**(audit 8 altas justificadas, sin
+  nuevas) · **V18**(`/novedades` **`○`**, legales+contacto **`ƒ`**, 5 módulos puros con
+  suite). **RF-29/30/31**: auditoría escrita hoy en `docs/ACCESSIBILITY.md` — hallazgos
+  con **gravedad**, **sin declaración de conformidad**; corregidos skip-link (WCAG
+  2.4.1), Escape + retorno de foco del panel (APG) y contraste del file picker del
+  admin; **lo que no se comprobó, dicho explícitamente** (lectores de pantalla, zoom
+  400 %, focus trap físico). **RF-34**: audit 8 altas justificadas en `docs/GATES.md`.
+  **Barrido CJK:** hoy **limpio** (0 coincidencias, 235 ficheros) **con control positivo
+  OK** (detectó el CJK de su propio fichero de control). ⚠️ `git diff MainLayout` ya
+  **no** es vacío: el skip-link de esta misma F9 (documentado en ACCESSIBILITY.md); el
+  prerender no cambió (`/novedades` `○`).
 
 ---
 
@@ -707,7 +806,7 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
 > una línea.** Esta tarea **recicla**: lo que entra obliga a que salga algo, y decidir qué sale
 > es una decisión, no un apaño.
 
-- [ ] **T18** — Recuentos con los números **reales de T17**: `AGENTS.md` (líneas 30 y 46 y la
+- [x] **T18** — Recuentos con los números **reales de T17**: `AGENTS.md` (líneas 30 y 46 y la
   lista de ficheros), `README.md` (recuentos, **rutas**, puesta en marcha con `SITE_URL`),
   `docs/GATES.md` (§8 y §9, más el límite del rate limit en memoria), `docs/SDD.md` (§4 con
   los dos modelos nuevos y el `status` como enumeración, §7 los flujos nuevos, §9 el recuento
@@ -739,7 +838,19 @@ esas cuatro fusiones quedan **14**. **Decisión del usuario.**
   barrido de CJK sobre lo escrito → **ninguno** y **probado que corría**; **ni `git add`, ni
   `commit`, ni `push`.**
 
-  **NOTA DE VERIFICACIÓN (pendiente).**
+  **NOTA DE VERIFICACIÓN (2026-10-07).** Recuentos actualizados a **419/77/38** en:
+  `AGENTS.md` (líneas 30 y 46, + lista de suites y referencias de la spec 009 y de
+  `docs/ACCESSIBILITY.md`), `README.md` (tabla de stack, scripts, estado actual —
+  **ya no dice 190/26/22**), `docs/SDD.md` (§9: 419/419 con la lista de suites de la
+  spec 009), `docs/THREATS.md` (recuentos globales y por suite: rate-limit 13,
+  session-token 23), `docs/GATES.md` (ya actualizado en su sesión), `CHANGELOG.md`
+  (entrada de la spec 009 en `[Sin publicar]` → `Añadido`, sin duplicar encabezado),
+  `docs/DEPLOY.md` (§1: `SITE_URL`; §5: las dos migraciones nuevas), `docs/PUBLICAR.md`
+  (`LegalData` en BD, `SITE_URL` de entorno). **MEMORY.md reciclado** en su sesión
+  (reescrito; fase, decisiones nuevas, trampas, hallazgos A1/A2/A3). Barrido CJK al
+  cierre: **limpio con control positivo** (235 ficheros). `grep "190 tests\|26 suites\|22
+  rutas"` sobre README/AGENTS/docs → **cero**. Sin `git add`/`commit`/`push` (no
+  pedidos).
 
 ---
 

@@ -1,6 +1,9 @@
 # Spec: Pingo POP — Cumplimiento legal, privacidad, seguridad y accesibilidad (009-legal-compliance-privacy)
 
-> **Estado: BORRADOR** (pendiente de aprobación del usuario).
+> **Estado: BORRADOR** — pendiente de aprobación del usuario. Constatación al
+> 2026-10-07: implementación **completa y verificada** (18/18 tareas en `tasks.md`,
+> con su nota de verificación y salida real). Cambiar el estado a APROBADA es
+> decisión del usuario, no del cierre de la spec.
 > Fecha: 2026-10-06. Specs previas: `001-pingo-rework`, `002-cartoon-visual`,
 > `006-user-profile` (sesiones y revocación), `008-site-and-category-images` (imágenes).
 > **Origen:** el usuario aportó un documento de 50 secciones ("Compliance Legal, Privacidad,

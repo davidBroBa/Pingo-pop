@@ -27,7 +27,7 @@ de estilo, no trabajo pendiente.
 - `npm run build` — build de producción
 - `npm run start` — ejecuta build (`next start -p 3000`)
 - `npm run lint` — ESLint
-- `npm run test` — `node --import tsx --test "tests/**/*.test.ts"` (190 tests, 26 suites)
+- `npm run test` — `node --import tsx --test "tests/**/*.test.ts"` (**419 tests**, **77 suites**)
 - `npm run validate` — valida `src/data/*.json` (no usado actualmente)
 - `npm run typecheck` — `tsc --noEmit`
 - `npm run check` — typecheck + lint + test + build (ideal antes de subir)
@@ -37,13 +37,13 @@ de estilo, no trabajo pendiente.
 - `src/app/api/` — rutas API (Zod en borde, 401/403 por rol, rate limit donde aplica)
 - `src/components/` — componentes co-ubicados con su `.css`
 - `src/lib/` — lógica reutilizable: `auth/`, `prisma.ts`, `env.ts`, `validation.ts`, `quote-schema.ts`, `quote-cart-storage.ts`, `account-schema.ts`, `upload-validation.ts`, `rate-limit.ts`, `prisma-error.ts`
-- `src/lib/auth/` — `password.ts` (argon2id), `session-token.ts` (HMAC-SHA256, base64url, `sv`), `require-admin.ts` (guard servidor, **revoca**), `session.ts` (lectura de cookie, con y sin revocación)
+- `src/lib/auth/` — `password.ts` (argon2id), `session-token.ts` (HMAC-SHA256, base64url, `sv`), `require-admin.ts` (guard servidor, **revoca**), `session.ts` (lectura de cookie, con y sin revocación), `sesion-temporal.ts` (predicado puro `swc` compartido por `proxy` y `requireAdmin()`)
 - `src/middleware.ts` — protección de `/admin/:path*` y `/perfil`. Solo exige ADMIN en `/admin/*`; corre en **Edge**, así que **no puede revocar sesiones** (no hay Prisma): la revocación la hace `requireAdmin()` y `getSessionUser()`
 - `src/app/perfil/` — página de perfil y su vista cliente. Solo `name`; el `email` no se edita
 - `src/app/api/account/` — `password` (revoca todas las sesiones) y `profile`
 - `src/generated/prisma/` — cliente Prisma generado (no editar)
 - `prisma/` — schema, migraciones, `seed.ts`
-- `tests/` — 26 suites con `node:test` + `tsx` (sin dependencias nuevas, **sin jsdom**: la lógica comprobable va en módulos puros de `src/lib/`, nunca dentro de un componente)
+- `tests/` — **419 tests** en **77 suites** con `node:test` + `tsx` (sin dependencias nuevas, **sin jsdom**: la lógica comprobable va en módulos puros de `src/lib/`, nunca dentro de un componente)
 - `public/uploads/products/` — imágenes de **productos y categorías** (nombres aleatorios, `.gitkeep` versionado)
 - `public/uploads/site/` — imágenes de **ajustes del sitio** (la foto del hero). Carpeta aparte porque su validación también lo es: `imagePath` para productos, `siteImagePath` para el hero. Un destino no puede usar la ruta del otro
 - `src/app/admin/apariencia/` — panel de la foto del hero (`PATCH /api/admin/site`)
@@ -81,6 +81,14 @@ de estilo, no trabajo pendiente.
 - **Magic bytes primero**: no basta con `Content-Type`. El `upload-validation.ts` comprueba los primeros bytes.
 - **PowerShell con `$HOME`**: el wrapper `srv.ps1` tiene trampas. Usar rutas absolutas (`/home/<usuario>/...`) o `exec` directo.
 - **Cookie forjada**: la firma HMAC debe verificarse (payload + hmac). No basta con que el payload sea parseable.
+- **Un Client Component que importe un módulo con `node:module` hace panic de
+  Turbopack** ("the chunking context does not support external modules"). Es el
+  **tercer caso** en este repo: `crypto-browserify` con `legal-versions.ts` (800 KB),
+  el enum de Prisma en la lista de cotizaciones, y `usuarios.ts`. La convención es
+  **partir el módulo** (`cotizaciones-panel.ts`, `usuarios-panel.ts`) y atar las dos
+  listas con un test.
+- **PowerShell trata `[id]` como comodín.** `Select-Path` y `Test-Path` no encuentran
+  `src/app/api/admin/usuarios/[id]/route.ts`. Usa `-LiteralPath`.
 
 ## Flujo de trabajo
 1. Leer `MEMORY.md` al empezar y comprobar la fase.
@@ -103,13 +111,20 @@ de estilo, no trabajo pendiente.
 - `docs/THREATS.md` — modelo STRIDE + Top 10 + pendientes justificados
 - `docs/DESIGN.md` — paleta (fuente de verdad), contraste medido, lenguaje cartoon
 - `docs/GATES.md` — gates, auditoría npm, razones de 8 altas residuales (justificadas)
+- `docs/ACCESSIBILITY.md` — auditoría de accesibilidad (spec 009, F9): hallazgos corregidos, pendientes y limitaciones. **No declara conformidad AA**
 - `docs/AI.md` — uso responsable de IA: qué se delega en el modelo y qué no
 - `specs/001-pingo-rework/`, `specs/002-cartoon-visual/` — **cerradas**, spec/plan/tasks con estado real. Referencia de estilo
 - `specs/003-quote-cart-persistence/` — **cerrada y commiteada**. Persistencia del carrito con validación Zod de lo guardado en `localStorage`. Referencia de estilo del patrón "módulo puro + tests sin DOM"
 - `specs/006-user-profile/` — **implementada, sin commitear**. Perfil, cambio de contraseña con revocación de sesiones y dos políticas por rol
+- `specs/007-crear-usuarios/` — **cerrada e implementada**. Gestión de cuentas: crear, desactivar, restablecer contraseña, contraseña temporal obligatoria. 14 tareas (T1–T14) con nota de verificación
+- `specs/008-site-and-category-images/` — **cerrada e implementada**. Imágenes de sitio, productos y categorías con subida validada por destino
+- `specs/009-legal-compliance-privacy/` — **cerrada e implementada** (2026-10-07). Legal (7 documentos), consentimiento de cookies on-demand, rate limit de lecturas públicas (120/ventana), auditoría de accesibilidad. 18 tareas (T1–T18)
 - `src/lib/auth/session-token.ts` — firma/verificación HMAC + `sv` (versión de sesión) e `isSessionCurrent`
 - `src/lib/auth/session.ts` — **`getSession()` no consulta la BD; `getSessionUser()` sí y revoca.** Elegir mal es un agujero o un coste innecesario
+- `src/lib/auth/sesion-temporal.ts` — **`sesionLimitada()` y `limitaSesionTemporal()`**: el predicado puro que comparten el `proxy` y `requireAdmin()`. `swc` ausente = 0, solo `=== 1` marca. Test de coherencia: las dos barreras coinciden para los mismos valores
 - `src/lib/account-schema.ts` — políticas de contraseña por rol (BUYER 8+, ADMIN 12+ con símbolos) y esquemas de cuenta. Puro, sin DOM
+- `src/lib/usuarios.ts` — esquemas Zod y `compruebaContrasena()` **lado servidor**. Importa Prisma → no importar desde Client Component
+- `src/lib/usuarios-panel.ts` — **lo que el panel necesita del navegador**: `ROLES`, `ACCIONES_USUARIO`, `ETIQUETA_ROL`, `textoConfirmacion()`. Sin Prisma, sin Zod, sin `node:module`
 - `src/lib/upload-validation.ts` — validación segura de subida
 - `src/lib/prisma-error.ts` — mapeo de errores Prisma
 - `src/context/QuoteCartContext.tsx` — carrito de cotización. **La carga va en un `useEffect` de montaje, nunca en el inicializador de `useState`**: leer `localStorage` ahí hace que el servidor y el cliente pinten ramas distintas y React tire la hidratación (spec 003, T9). El efecto de escritura va protegido por `cargado`

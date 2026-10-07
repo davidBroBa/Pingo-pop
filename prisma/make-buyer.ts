@@ -53,15 +53,19 @@ async function main(): Promise<void> {
   });
 
   console.log(`comprador id=${found.id} email=${found.email} rol=${found.role}`);
-  console.log(`hash argon2id: ${found.passwordHash.startsWith("$argon2id$")}`);
-  console.log("password del test: Comprador-de-prueba-1");
+  // Solo el booleano, nunca el hash: el log no debe poder reconstruir nada.
+  const formatoArgon2id = found.passwordHash.startsWith("$argon2id$");
+  console.log(`hash argon2id: ${formatoArgon2id}`);
 
   await prisma.$disconnect();
 }
 
 main()
   .catch((error: unknown) => {
-    console.error("No se pudo crear el comprador:", error);
+    console.error(
+      "No se pudo crear el comprador:",
+      error instanceof Error ? error.message : String(error),
+    );
     process.exitCode = 1;
   })
   .finally(() => {

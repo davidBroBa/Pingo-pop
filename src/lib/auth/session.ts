@@ -49,16 +49,23 @@ export async function getSessionUser(): Promise<SessionPayload | null> {
     return null;
   }
 
-  let usuario: { sessionVersion: number; role: "BUYER" | "ADMIN" } | null;
+  let usuario: {
+    sessionVersion: number;
+    role: "BUYER" | "ADMIN";
+    debeCambiarContrasena: boolean;
+  } | null;
   try {
     usuario = await prisma.user.findUnique({
       where: { id: session.userId },
-      select: { sessionVersion: true, role: true },
+      select: { sessionVersion: true, role: true, debeCambiarContrasena: true },
     });
   } catch (error) {
     // Fail closed: sin base de datos no se puede saber si la sesion fue revocada.
     // Un `null` aqui produce un 401 limpio; dar el acceso seria peor.
-    console.error("getSessionUser: no se pudo leer el usuario:", error);
+    console.error(
+      "getSessionUser: no se pudo leer el usuario:",
+      error instanceof Error ? error.message : String(error),
+    );
     return null;
   }
 
@@ -72,5 +79,20 @@ export async function getSessionUser(): Promise<SessionPayload | null> {
 
   // El rol se relee de la base de datos y no de la cookie: si a alguien se le baja
   // el rol, su sesion deja de darle panel aunque el token siga firmado y sin expirar.
-  return { ...session, role: usuario.role };
+  //
+  // `swc` se relee **por el mismo motivo y con la misma regla**. La cookie lleva el
+  // distintivo para que el `proxy` decida rapido —corre en Edge y no tiene Prisma—,
+  // pero aqui **manda la base de datos**: si el `swc` de la cookie dijera 0 y la
+  // columna dijera `true`, se devuelve `swc: 1`.
+  //
+  // **Si se borra esta ultima linea, nada falla.** El `select` seguiria trayendo la
+  // columna, el token seguiria siendo valido y el panel seguiria abriendose con una
+  // sesion que deberia estar limitada. Por eso va en el mismo `return` que el rol y
+  // no en una linea suelta: es el unico sitio donde "manda la base de datos" se
+  // convierte en algo que se puede ver de un vistazo.
+  return {
+    ...session,
+    role: usuario.role,
+    swc: usuario.debeCambiarContrasena ? 1 : 0,
+  };
 }

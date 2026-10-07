@@ -23,9 +23,21 @@ interface MainLayoutProps {
 export function MainLayout({ children, haySesion = false }: MainLayoutProps) {
   return (
     <>
+      <a
+        href="#contenido"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] cartoon-focus focus:rounded-2xl focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-primary"
+      >
+        Saltar al contenido
+      </a>
+
       <Navbar haySesion={haySesion} />
 
-      <main>{children}</main>
+      {/* El tabIndex=-1 hace que `main` sea enfocable por programa, que es lo
+          que necesita el enlace "Saltar al contenido" (WCAG 2.4.1). No entra
+          en el orden de tabulacion natural. */}
+      <main id="contenido" tabIndex={-1}>
+        {children}
+      </main>
 
       <Footer />
     </>
