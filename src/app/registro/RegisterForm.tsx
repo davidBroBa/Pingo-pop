@@ -4,10 +4,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 
-
 const VERSION_TERMINOS = "1.0";
 const VERSION_PRIVACIDAD = "1.0";
 
+/**
+ * Formulario de creacion de cuenta de cliente (rol BUYER).
+ *
+ * No decide nada por su cuenta: envia los datos a `/api/auth/register`, que
+ * valida en el borde, crea el usuario y abre la sesion. Este componente solo
+ * pinta el estado de esa peticion (cargando, errores por campo, exito).
+ */
 export function RegisterForm(): React.ReactElement {
   const router = useRouter();
   const emailId = useId();
@@ -86,15 +92,25 @@ export function RegisterForm(): React.ReactElement {
   };
 
   return (
-    <form className="flex flex-col gap-6" onSubmit={handleSubmit} noValidate>
+    <form
+      className="cartoon-border cartoon-shadow space-y-6 rounded-3xl bg-card p-6 sm:p-8"
+      onSubmit={handleSubmit}
+      noValidate
+    >
       {general ? (
-        <div role="alert" className="rounded-md bg-accent/10 p-3 text-sm text-ink">
+        <p
+          role="alert"
+          className="cartoon-border cartoon-shadow-sm rounded-2xl bg-cartoon-coral p-4 text-sm font-medium text-primary"
+        >
           {general}
-        </div>
+        </p>
       ) : null}
 
-      <div className="flex flex-col gap-2">
-        <label htmlFor={emailId} className="text-sm font-medium text-ink">
+      <div>
+        <label
+          htmlFor={emailId}
+          className="mb-2 block text-sm font-semibold text-primary"
+        >
           Correo electrónico
         </label>
         <input
@@ -105,22 +121,31 @@ export function RegisterForm(): React.ReactElement {
           required
           value={values.email}
           onChange={handleChange("email")}
-          className={`rounded-md border px-3 py-2 text-sm text-ink shadow-cartoon-sm focus:outline-none cartoon-focus ${
-            errors.email ? "border-red-400" : "border-border"
+          placeholder="tu@correo.com"
+          className={`cartoon-border cartoon-focus w-full rounded-2xl bg-white px-4 py-3 outline-none ${
+            errors.email ? "border-cartoon-coral" : ""
           }`}
           aria-invalid={errors.email ? "true" : "false"}
           aria-describedby={errors.email ? `${emailId}-error` : undefined}
         />
         {errors.email ? (
-          <p id={`${emailId}-error`} role="alert" className="text-xs text-red-600">
+          <p
+            id={`${emailId}-error`}
+            role="alert"
+            className="mt-2 inline-block rounded-full bg-cartoon-coral px-3 py-1 text-xs font-semibold text-primary"
+          >
             {errors.email}
           </p>
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label htmlFor={nameId} className="text-sm font-medium text-ink">
-          Nombre (opcional)
+      <div>
+        <label
+          htmlFor={nameId}
+          className="mb-2 block text-sm font-semibold text-primary"
+        >
+          Nombre{" "}
+          <span className="font-normal text-foreground-muted">(opcional)</span>
         </label>
         <input
           id={nameId}
@@ -129,21 +154,29 @@ export function RegisterForm(): React.ReactElement {
           autoComplete="name"
           value={values.name}
           onChange={handleChange("name")}
-          className={`rounded-md border px-3 py-2 text-sm text-ink shadow-cartoon-sm focus:outline-none cartoon-focus ${
-            errors.name ? "border-red-400" : "border-border"
+          placeholder="Cómo prefieres que te llamemos"
+          className={`cartoon-border cartoon-focus w-full rounded-2xl bg-white px-4 py-3 outline-none ${
+            errors.name ? "border-cartoon-coral" : ""
           }`}
           aria-invalid={errors.name ? "true" : "false"}
           aria-describedby={errors.name ? `${nameId}-error` : undefined}
         />
         {errors.name ? (
-          <p id={`${nameId}-error`} role="alert" className="text-xs text-red-600">
+          <p
+            id={`${nameId}-error`}
+            role="alert"
+            className="mt-2 inline-block rounded-full bg-cartoon-coral px-3 py-1 text-xs font-semibold text-primary"
+          >
             {errors.name}
           </p>
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label htmlFor={passwordId} className="text-sm font-medium text-ink">
+      <div>
+        <label
+          htmlFor={passwordId}
+          className="mb-2 block text-sm font-semibold text-primary"
+        >
           Contraseña
         </label>
         <input
@@ -154,21 +187,37 @@ export function RegisterForm(): React.ReactElement {
           required
           value={values.password}
           onChange={handleChange("password")}
-          className={`rounded-md border px-3 py-2 text-sm text-ink shadow-cartoon-sm focus:outline-none cartoon-focus ${
-            errors.password ? "border-red-400" : "border-border"
+          placeholder="••••••••"
+          className={`cartoon-border cartoon-focus w-full rounded-2xl bg-white px-4 py-3 outline-none ${
+            errors.password ? "border-cartoon-coral" : ""
           }`}
           aria-invalid={errors.password ? "true" : "false"}
-          aria-describedby={errors.password ? `${passwordId}-error` : undefined}
+          aria-describedby={
+            errors.password ? `${passwordId}-error` : `${passwordId}-hint`
+          }
         />
+        <p
+          id={`${passwordId}-hint`}
+          className="mt-2 text-xs text-foreground-muted"
+        >
+          Mínimo 8 caracteres.
+        </p>
         {errors.password ? (
-          <p id={`${passwordId}-error`} role="alert" className="text-xs text-red-600">
+          <p
+            id={`${passwordId}-error`}
+            role="alert"
+            className="mt-2 inline-block rounded-full bg-cartoon-coral px-3 py-1 text-xs font-semibold text-primary"
+          >
             {errors.password}
           </p>
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label htmlFor={confirmPasswordId} className="text-sm font-medium text-ink">
+      <div>
+        <label
+          htmlFor={confirmPasswordId}
+          className="mb-2 block text-sm font-semibold text-primary"
+        >
           Repetir contraseña
         </label>
         <input
@@ -179,62 +228,80 @@ export function RegisterForm(): React.ReactElement {
           required
           value={values.confirmPassword}
           onChange={handleChange("confirmPassword")}
-          className={`rounded-md border px-3 py-2 text-sm text-ink shadow-cartoon-sm focus:outline-none cartoon-focus ${
-            errors.confirmPassword ? "border-red-400" : "border-border"
+          placeholder="••••••••"
+          className={`cartoon-border cartoon-focus w-full rounded-2xl bg-white px-4 py-3 outline-none ${
+            errors.confirmPassword ? "border-cartoon-coral" : ""
           }`}
           aria-invalid={errors.confirmPassword ? "true" : "false"}
-          aria-describedby={errors.confirmPassword ? `${confirmPasswordId}-error` : undefined}
+          aria-describedby={
+            errors.confirmPassword ? `${confirmPasswordId}-error` : undefined
+          }
         />
         {errors.confirmPassword ? (
-          <p id={`${confirmPasswordId}-error`} role="alert" className="text-xs text-red-600">
+          <p
+            id={`${confirmPasswordId}-error`}
+            role="alert"
+            className="mt-2 inline-block rounded-full bg-cartoon-coral px-3 py-1 text-xs font-semibold text-primary"
+          >
             {errors.confirmPassword}
           </p>
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-3">
-        <label className="flex items-start gap-2 text-sm text-ink">
+      <div className="space-y-3">
+        <label className="flex items-start gap-3 text-sm text-primary">
           <input
             type="checkbox"
             id={terminosId}
             checked={aceptaTerminos}
             onChange={(e) => {
               setAceptaTerminos(e.target.checked);
-              if (e.target.checked) setErrors((prev) => ({ ...prev, acepta: undefined }));
+              if (e.target.checked)
+                setErrors((prev) => ({ ...prev, acepta: undefined }));
             }}
-            className="mt-1"
+            className="cartoon-focus mt-0.5 h-4 w-4 accent-accent"
             aria-describedby={errors.acepta ? `${terminosId}-err` : undefined}
           />
           <span>
             He leído y acepto los{" "}
-            <Link href="/terminos-y-condiciones" className="underline">
+            <Link
+              href="/terminos-y-condiciones"
+              className="font-semibold text-primary underline"
+            >
               Términos y condiciones
             </Link>
             .
           </span>
         </label>
-        <label className="flex items-start gap-2 text-sm text-ink">
+        <label className="flex items-start gap-3 text-sm text-primary">
           <input
             type="checkbox"
             id={privacidadId}
             checked={aceptaPrivacidad}
             onChange={(e) => {
               setAceptaPrivacidad(e.target.checked);
-              if (e.target.checked && aceptaTerminos) setErrors((prev) => ({ ...prev, acepta: undefined }));
+              if (e.target.checked && aceptaTerminos)
+                setErrors((prev) => ({ ...prev, acepta: undefined }));
             }}
-            className="mt-1"
+            className="cartoon-focus mt-0.5 h-4 w-4 accent-accent"
             aria-describedby={errors.acepta ? `${privacidadId}-err` : undefined}
           />
           <span>
             He leído y acepto el{" "}
-            <Link href="/aviso-de-privacidad" className="underline">
+            <Link
+              href="/aviso-de-privacidad"
+              className="font-semibold text-primary underline"
+            >
               Aviso de privacidad
             </Link>
             .
           </span>
         </label>
         {errors.acepta ? (
-          <p role="alert" className="text-xs text-red-600">
+          <p
+            role="alert"
+            className="inline-block rounded-full bg-cartoon-coral px-3 py-1 text-xs font-semibold text-primary"
+          >
             {errors.acepta}
           </p>
         ) : null}
@@ -243,14 +310,17 @@ export function RegisterForm(): React.ReactElement {
       <button
         type="submit"
         disabled={loading || !aceptaTerminos || !aceptaPrivacidad}
-        className={`rounded-md bg-accent px-4 py-2 text-sm font-semibold text-ink shadow-cartoon-sm transition hover:bg-accent/90 focus:outline-none cartoon-focus disabled:cursor-not-allowed disabled:opacity-60`}
+        className="cartoon-border cartoon-shadow cartoon-hover cartoon-focus h-12 w-full rounded-2xl bg-accent px-6 font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-60"
       >
         {loading ? "Creando cuenta..." : "Crear cuenta"}
       </button>
 
-      <p className="text-sm text-muted">
+      <p className="text-center text-sm text-foreground-muted">
         ¿Ya tienes cuenta?{" "}
-        <Link href="/login" className="underline">
+        <Link
+          href="/login"
+          className="font-semibold text-primary underline"
+        >
           Iniciar sesión
         </Link>
       </p>

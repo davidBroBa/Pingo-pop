@@ -5,6 +5,17 @@
 
 ## Fase actual
 
+- **Spec 012 `favicon-404-registro` (2026-10-08):** favicon con el logo
+  (`favicon.ico` + `icon.png` + `apple-icon.png` generados desde
+  `public/images/logo/logo.png` con `specs/012/iconos.mjs` y `sharp`), página
+  `not-found.tsx` propia con lenguaje cartoon, y `/registro` alineado al marco
+  visual de `/login` (fondo `cartoon-cream`, tarjeta `cartoon-border
+  cartoon-shadow rounded-3xl`, inputs `rounded-2xl` cartoon, errores coral con
+  `role="alert"`, microcopy). Cero cambios de lógica: el payload y los estados
+  del registro son los mismos. Gates locales: typecheck 0 · lint 0 · 431 tests /
+  0 fallos · build OK (la 404 prerenderizada enlaza favicon.ico + icon.png +
+  apple-icon.png; smoke local: /registro 200, /favicon.ico 200, ruta inexistente
+  → 404 propia).
 - **Spec 010 `registro-publico`: implementada y CERRADA el 2026-10-08** (el
   usuario pidió cerrarla y commitearla). Registro público solo `BUYER` desde
   `/login` → `/registro`; admins exclusivamente desde panel o seed
@@ -39,6 +50,22 @@
 - **D21: contraseña temporal obligatoria y de verdad.** `proxy` (403 en `/admin/*`),
   `requireAdmin()` (igual en la API), aviso en `/perfil`. Sin callejón sin salida.
 
+## Decisiones de esta tanda (2026-10-08, spec 012)
+
+- **Favicon fuente única = logo.** Se genera con un script versionado
+  (`specs/012-favicon-404-registro/iconos.mjs`) desde `public/images/logo/logo.png`
+  para que el logo siga siendo la única fuente de verdad. `sharp` 0.35 **emite
+  PNG pero no ICO**: el `.ico` se envuelve a mano (formato Vista+: PNG RGBA
+  embebido — Next rechaza el ICO si el PNG no es RGBA, primer build falló).
+- **Registro: mismo marco que login, cero lógica tocada.** La tarjeta, inputs y
+  errores ahora usan los tokens cartoon del resto del sitio (spec 002). El
+  payload POST, el manejo de estados y la redirección a `/perfil` no cambian
+  (RF-8); solo presentación y microcopy.
+- **404 estática de marca:** no consulta BD ni sesión, `noindex` en robots
+  (`_not-found` prerenderizado). Hereda fuentes/variables del layout raíz.
+- **QA-1/QA-2 (spec 010) siguen abiertos** con su estado en la sección
+  "Hallazgos QA".
+
 ## Decisiones de esta tanda (2026-10-08, spec 010)
 
 - **D25:** registro inmediato, sin verificación por email (no hay infraestructura
@@ -61,9 +88,14 @@
 
 - **QA-1 contraseña admin:** la original del `.env` **no cumple la política
   ADMIN** (falta puntuación) y el endpoint la rechazó con 400. La BD quedó con la
-  fuerte temporal `REDACTADA` (login 200 verificado); el txt del
+  fuerte temporal (login 200 verificado); el txt del
   Escritorio quedó desactualizado. **Pendiente de decisión:** dejar la fuerte y
   actualizar `.env`+txt, o restaurar la original por BD (bypass de política).
+- **⚠️ Fuga corregida:** el valor literal de `ADMIN_PASSWORD` llegó a salir en
+  este `MEMORY.md` (commit `a96dd4c`, repo **público**). Se retiró de aquí el
+  2026-10-08; la contraseña en uso se considera **expuesta desde ese commit** y
+  conviene rotarla. Las credenciales reales solo viven en `.env` y en el txt del
+  Escritorio.
 - **QA-2 uploads en producción:** (a) EACCES en `public/uploads` (app `nextjs`
   uid 1001 vs owner root) — chown en caliente hecho, **se pierde al recrear el
   contenedor** (Dockerfile sin `chown`); (b) archivos nuevos en `public/uploads/*`

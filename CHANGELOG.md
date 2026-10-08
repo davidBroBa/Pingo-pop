@@ -20,6 +20,19 @@ versionado es [SemVer](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Añadido
+
+- **El icono del navegador es el logo de la empresa.** Se sirven `favicon.ico`, `icon.png`
+  y `apple-icon.png` (iOS 180×180) generados desde `public/images/logo/logo.png` con un
+  script versionado (`specs/012-favicon-404-registro/iconos.mjs`), en lugar del favicon
+  por defecto de Vercel.
+- **Página 404 a medida** (`src/app/not-found.tsx`) con el lenguaje cartoon del sitio
+  (logo, badge "404 · Se fue de paseo", enlace "Volver a la tienda") y `noindex`.
+- **El registro se ve como el resto del sitio.** `/registro` y su formulario usan el marco
+  visual cartoon de `/login` (fondo `cartoon-cream`, tarjeta `cartoon-border
+  cartoon-shadow`, inputs `rounded-2xl`, errores coral con `role="alert"`) y microcopy más
+  amable, sin cambiar ni una línea de la lógica de alta.
+
 ### Arreglado
 
 - **Cambiar la contraseña ahora cierra todas las sesiones, y se puede hacer.** Antes
