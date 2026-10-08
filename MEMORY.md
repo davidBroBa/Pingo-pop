@@ -5,14 +5,20 @@
 
 ## Fase actual
 
-- **Spec 009 `legal-compliance-privacy`: cerrada, verificada y APROBADA por el
-  usuario el 2026-10-07** (18/18 casillas con su nota; `spec.md` APROBADA).
-  Commiteada y pusheada (`b305b69`). Gate con dev server parado: typecheck 0 ·
-  lint 0 · **419 tests / 77 suites / 0 fallos** · build **38 rutas**.
-- **Próximo paso: desplegar al servidor** con `docs/DEPLOY.md`, `SITE_URL` real
-  (aún `localhost`) y subdominio en Cloudflare (pendiente de datos del usuario).
-- Migraciones al día: `npx prisma migrate status` → "up to date", **9** (las 6 de la
-  008 + `add_legal_models` + `quote_status_enum` + la de la 007, `add_usuario_estado`).
+- **Spec 010 `registro-publico`: implementada y CERRADA el 2026-10-08** (el
+  usuario pidió cerrarla y commitearla). Registro público solo `BUYER` desde
+  `/login` → `/registro`; admins exclusivamente desde panel o seed
+  (`seedAdmin()` ya existía). Gates locales con dev parado: typecheck 0 ·
+  lint 0 · **431 tests / 0 fallos** · build OK con `ƒ /registro`.
+- **D28 ejecutada como migración:** `LegalAcceptance.userId Int?` + `SetNull` +
+  índice. Migración `20261008000000_add_legal_acceptance_user` creada con
+  `prisma migrate diff` (BD local apagada) y **aplicada en el servidor**
+  (`migrate deploy` → "successfully applied"); cliente Prisma regenerado en
+  servidor con `./node_modules/.bin/prisma generate` (¡`npx` se cuelga
+  preguntando!).
+- Desplegado en el servidor el 2026-10-07 (build `cON67qap`, 38 rutas) + rebuild
+  de la spec 010 el 2026-10-08 (pendiente de QA en URL pública).
+- Migraciones en servidor: 10 (las 9 previas + `add_legal_acceptance_user`).
 
 ## Decisiones que no conviene re-litigar (vigentes)
 
@@ -33,7 +39,39 @@
 - **D21: contraseña temporal obligatoria y de verdad.** `proxy` (403 en `/admin/*`),
   `requireAdmin()` (igual en la API), aviso en `/perfil`. Sin callejón sin salida.
 
-## Decisiones de esta tanda (2026-10-07)
+## Decisiones de esta tanda (2026-10-08, spec 010)
+
+- **D25:** registro inmediato, sin verificación por email (no hay infraestructura
+  de correo; spec 009). **D26:** dos casillas obligatorias (Términos + Privacidad)
+  con la versión vigente, validadas con `sonVersionesValidas` (un 0.9 viejo → 400).
+- **D27:** tras registrarse, sesión automática con el mismo patrón de cookie que
+  el login (`cookies()` + `signSession` + `buildSessionPayload`, `swc=0`).
+- **D28 (confirmada por el usuario el 2026-10-08):** la aceptación se guarda en
+  `LegalAcceptance` con la columna nueva `userId SetNull`. Añade una fila a un
+  modelo que la spec 009 había dejado sin identificador de usuario **a propósito**;
+  el comentario del schema ya explica el cambio. `SetNull` mantiene la evidencia
+  si se borra la cuenta.
+- **El rol `BUYER` se fija en el servidor**; el payload no contempla `role`, así
+  que `role: "ADMIN"` en el POST se ignora (verificado en QA con respuesta 201
+  `role: BUYER`).
+- **Carrera de email duplicado → 409 vía `describePrismaError`** (el pre-chequeo
+  no cubre dos altas simultáneas); fallo real de BD → 503 + `Retry-After: 30`.
+
+## Hallazgos QA (2026-10-07, abiertos)
+
+- **QA-1 contraseña admin:** la original del `.env` **no cumple la política
+  ADMIN** (falta puntuación) y el endpoint la rechazó con 400. La BD quedó con la
+  fuerte temporal `REDACTADA` (login 200 verificado); el txt del
+  Escritorio quedó desactualizado. **Pendiente de decisión:** dejar la fuerte y
+  actualizar `.env`+txt, o restaurar la original por BD (bypass de política).
+- **QA-2 uploads en producción:** (a) EACCES en `public/uploads` (app `nextjs`
+  uid 1001 vs owner root) — chown en caliente hecho, **se pierde al recrear el
+  contenedor** (Dockerfile sin `chown`); (b) archivos nuevos en `public/uploads/*`
+  devuelven 404 hasta recrear el contenedor (Next 16 resuelve `public/` al boot);
+  no hay volumen para uploads en `docker-compose.yml`. **Pendiente de decisión:**
+  route handler dinámico (spec nueva) vs volumen + `chown` en Dockerfile.
+
+## Decisiones de la tanda 009 (2026-10-07)
 
 - **D14 en práctica: sin banner automático, SÍ apertura a demanda.** El enlace
   "Preferencias de cookies" está **siempre visible** en el pie; el panel solo se abre
@@ -86,7 +124,7 @@
 | H3 | Dos "+" rápidos en el carrito solo suman 1 | Abierto, bajo impacto |
 | — | **Hover `text-accent` de Navbar/Footer** (1.76:1 al pasar el cursor) | Pendiente: elegir color = decisión de diseño |
 | — | **Focus trap físico del diálogo** no implementado ni probado con teclado real | Documentado en ACCESSIBILITY.md |
-| — | **`SITE_URL` en el servidor sigue `localhost`**: el sitemap publicará localhost | **Pendiente antes de desplegar** |
+| — | `SITE_URL` en el servidor era `localhost` | **Resuelto**: `https://pingopo.davidamador.dev` en `.env`, sitemap verificado |
 | — | **`middleware` → `proxy`** (Next 16.3.8 lo avisa en cada arranque) | Merece spec propia |
 | — | **Gates sin bloquear** (`.git/hooks/` vacío), repo público: falta CI | Pendiente de decisión |
 

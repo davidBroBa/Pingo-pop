@@ -39,10 +39,16 @@ model User {
   // `sessionVersion`, y por eso quita el acceso de verdad: toda cookie emitida
   // antes queda en una version anterior.
   //
-  // No hay ninguna relacion de `User` en el esquema, asi que borrar una fila no
-  // romperia nada tecnicamente. Aun asi esta spec **no borra cuentas**: se perderia
-  // el registro de que existieron, y no hay log de auditoria que lo reconstruya.
+  // La unica relacion de `User` en el esquema es `legalAcceptances` (spec 010), y
+  // es con `SetNull`: borrar una fila no romperia nada tecnicamente, pero esta
+  // spec **no borra cuentas** igualmente: se perderia el registro de que existieron,
+  // y no hay log de auditoria que lo reconstruya.
   activo Boolean @default(true)
+
+  // Aceptaciones legales ligadas a la cuenta (spec 010, D28). `SetNull` en la
+  // columna: la evidencia sobrevive al borrado de la cuenta, porque no contiene
+  // datos personales.
+  legalAcceptances LegalAcceptance[]
 }
 
 /**
@@ -97,11 +103,12 @@ model LegalData {
 }
 
 /**
- * Evidencia de que alguien acepto una version de un documento (spec 009, RF-19).
+ * Evidencia de que alguien acepto una version de un documento (spec 009, RF-19;
+ * ampliado en spec 010, D28).
  *
- * Se guarda **cuatro** campos y ni uno mas (RF-20). En concreto, **no** guarda IP,
- * ni nombre, ni correo, ni un identificador de usuario: el vinculo con la persona ya
- * existe a traves de `quoteRequestId`, y duplicar esos datos seria recolectar sin
+ * Se guarda **cinco** campos y ni uno mas (RF-20). En concreto, **no** guarda IP,
+ * ni nombre, ni correo: el vinculo con la persona ya existe a traves de
+ * `quoteRequestId` o `userId`, y duplicar esos datos seria recolectar sin
  * finalidad, que es justo lo que este proyecto quiere evitar.
  */
 model LegalAcceptance {
@@ -110,16 +117,22 @@ model LegalAcceptance {
   version    String
   aceptadoAt DateTime      @default(now())
 
-  // Opcional a proposito, y con `SetNull` en vez de `Cascade`: si se borra la
-  // solicitud (retencion o cancelacion), **el registro de aceptacion sobrevive**.
-  // Puede, porque no contiene ningun dato personal: `tipo`, `version` y `aceptadoAt`
-  // siguen siendo prueba de que version estaba vigente. Un `Cascade` lo borraria,
-  // y con el la unica evidencia de que se acepto.
-  quoteRequestId Int?
-  quoteRequest   QuoteRequest? @relation(fields: [quoteRequestId], references: [id], onDelete: SetNull)
+  // Opcional a proposito, y con `SetNull` en vez de `Cascade`: si se borra el
+  // usuario o la solicitud (retencion o cancelacion), **el registro de aceptacion
+  // sobrevive**. Puede, porque no contiene ningun dato personal: `tipo`, `version`
+  // y `aceptadoAt` siguen siendo prueba de que version estaba vigente. Un
+  // `Cascade` lo borraria, y con el la unica evidencia de que se acepto.
+  // `userId` llego con la spec 010 (registro publico): alla no existe todavia
+  // `quoteRequestId`, y sin la columna la aceptacion del alta no quedaria en
+  // ningun sitio.
+  userId          Int?
+  user            User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  quoteRequestId  Int?
+  quoteRequest    QuoteRequest? @relation(fields: [quoteRequestId], references: [id], onDelete: SetNull)
 
   @@index([tipo, version])
   @@index([quoteRequestId])
+  @@index([userId])
 }
 
 model Category {

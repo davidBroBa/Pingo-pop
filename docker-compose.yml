@@ -66,5 +66,58 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # Aplicacion Next.js en Docker.
+  #
+  # Escucha SOLO en 127.0.0.1:3000: el reverse proxy (Caddy) es el unico
+  # punto de entrada publico. Next.js nunca se expone directamente a Internet.
+  #
+  # El build usa el Dockerfile multi-stage del proyecto. Las variables de
+  # entorno se leen del .env del proyecto (mismo fichero que usa la BD).
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pingo-app
+    restart: unless-stopped
+
+    # Solo en loopback: Caddy hace de reverse proxy y es el unico que
+    # necesita hablar con la app.
+    ports:
+      - "127.0.0.1:3000:3000"
+
+    environment:
+      # Conexion a la base de datos (mismo usuario que el servicio db)
+      # La app se conecta al contenedor db por el nombre de red, no por 127.0.0.1
+      DATABASE_URL: mysql://${DB_USER:-pingo}:${DB_PASSWORD:?define DB_PASSWORD en .env}@db:3306/${MARIADB_DATABASE:-pingo_pop}
+      # Secreto de sesion (HMAC-SHA256)
+      SESSION_SECRET: ${SESSION_SECRET:?define SESSION_SECRET en .env}
+      # URL publica del sitio (robots.txt y sitemap.xml)
+      SITE_URL: ${SITE_URL:-https://pingopo.davidamador.dev}
+      # Entorno de produccion
+      NODE_ENV: production
+
+    # La app depende de la base de datos: si db no esta sana, no arranca
+    depends_on:
+      db:
+        condition: service_healthy
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/ || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    security_opt:
+      - no-new-privileges:true
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   pingo-db-data:

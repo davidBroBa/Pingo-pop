@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
@@ -143,6 +144,16 @@ export default function LoginForm({ next }: { next: string | null }) {
       >
         {loading ? "Entrando..." : "Entrar"}
       </button>
+
+      <p className="text-center text-sm text-muted">
+        ¿No tienes cuenta?{" "}
+        <Link
+          href="/registro"
+          className="font-semibold text-primary underline"
+        >
+          Crear cuenta
+        </Link>
+      </p>
     </form>
   );
 }

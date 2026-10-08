@@ -35,6 +35,14 @@
 | E8 | `/admin/*` | Admin | Si, rol ADMIN | Middleware + comprobacion en pagina |
 | E9 | `PATCH /api/categories/[id]` | Admin | Si, rol ADMIN | `requireAdmin()` + `UpdateCategorySchema` (sin `slug`) + 409 si el nombre choca |
 | E10 | `PATCH /api/admin/site` | Admin | Si, rol ADMIN | `requireAdmin()` + `siteImagePath` |
+| E11 | `POST /api/auth/register` | Publico | No | Rate limit 5/15 min + `RegisterSchema`; rol fijo a `BUYER` en el servidor, nunca acepta rol del payload |
+
+**E11, spec 010.** El registro publico solo crea cuentas `BUYER`: el rol se fija
+dentro de la ruta y el payload no lo contempla, de modo que un cliente que mande
+`role: "ADMIN"` no llega ni a mirarse. El duplicado de correo responde 409 por el
+indice `unique` (con la carrera cubierta por `describePrismaError`), y la
+aceptacion legal queda registrada en `LegalAcceptance` con `userId` dentro de la
+misma transaccion que crea la cuenta.
 
 **E6, ampliada tras la spec 008.** El endpoint acepta un campo `target` que decide
 la carpeta de destino. No es una ruta de fichero: se contrasta contra las claves de

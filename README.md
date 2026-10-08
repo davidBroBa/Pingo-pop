@@ -171,10 +171,11 @@ specs/            001-pingo-rework, 002-cartoon-visual (spec, plan, tasks)
 |---|---|---|
 | `/`, `/products`, `/products/[slug]` | Público | Catálogo |
 | `/cotizacion` | Público | Formulario de cotización y carrito |
-| `/contacto`, `/novedades`, `/login` | Público | |
+| `/contacto`, `/novedades`, `/login`, `/registro` | Público | `/registro` redirige a `/` si ya hay sesión |
 | `/perfil` | Con sesión | Nombre, cambio de contraseña, cierre de sesión. Bloque extra para ADMIN |
 | `/admin/productos`, `/admin/categorias` | **ADMIN** | Middleware **y** `requireAdmin()` |
 | `POST /api/auth/login`, `/api/auth/logout` | Público | Rate limit 10/15 min |
+| `POST /api/auth/register` | Público | Alta solo `BUYER` (spec 010). Rate limit 5/15 min |
 | `POST /api/account/password` | Con sesión | **Revoca todas las sesiones.** Rate limit 5/15 min |
 | `PATCH /api/account/profile` | Con sesión | Solo `name`; el esquema es `strict()` |
 | `POST /api/quotes` | Público | Rate limit 5/15 min |
@@ -290,7 +291,9 @@ Cosas que **no** funcionan y conviene saber antes de prometer nada:
 - **Las imágenes huérfanas no se limpian**: un producto borrado deja su fichero en
   `public/uploads/products/`.
 - **No hay registro de auditoría**: las acciones de admin no se registran.
-- **No existe registro de BUYER**: solo el seed y scripts crean ese rol.
+- **Los administradores no se crean por registro público**: solo desde
+  `/admin/usuarios` o el seed. El registro público (`/registro`, spec 010) crea
+  exclusivamente cuentas `BUYER`.
 - `npm audit`: 8 altas residuales en tooling, sin parche disponible.
 - Next 16 avisa de que `middleware` pasa a llamarse `proxy`; el aviso no rompe nada.
 - `src/config/navigation.ts` y `src/config/theme.ts` son **código muerto** (nadie los
