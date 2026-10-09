@@ -5,6 +5,36 @@
 
 ## Fase actual
 
+- **Tanda de reparación (2026-10-08, botones de catálogo + uploads):** dos bugs
+  reportados por el usuario, arreglados y desplegados.
+  1. **Botones de la portada no llevaban a ningún lado:** las tarjetas de
+     categoría ahora enlazan (`hrefCategoria()` en `category-card-props.ts`) a
+     `/products?categoria=<slug>`; el catálogo filtra por ese parámetro
+     (`src/lib/catalog-filter.ts` + `src/app/products/page.tsx`). Reglas:
+     `?categoria=` vacío/ausente = catálogo completo; slug válido = filtrado (h1
+     con el nombre de la categoría + enlace "Ver todo el catálogo"); slug
+     inexistente o malformado = 404 propio. La red de seguridad (sin categorías
+     en BD) enlaza a `/products`. Verificado en producción: 4 tarjetas con
+     href correcto, `pines-metalicos` → 200 con h1 "Pines metálicos",
+     `?categoria=` → 200, slug inexistente/inválido → 404.
+  2. **Imagen del muñeco no cargaba:** spec 011 implementada. Route handler
+     `src/app/uploads/[...path]/route.ts` que lee disco por petición (Next 16 no
+     sirve desde `public/` lo que no resolvió al boot), volumen named
+     `pingo-uploads` en `docker-compose.yml`, `chown` + borrado de `.gitkeep` en
+     el Dockerfile (un dotfile registrado al boot lo servía Next estático → 500;
+     sin él cae al handler → 400). Verificado en producción: fichero nuevo → 200
+     **sin recrear el contenedor**, `.php` → 400, inexistente → 404, `.gitkeep`
+     → 400, muñeco `4895c7d1…` → 200, hero → 200.
+- **Muñeco visible ya funcionando (2026-10-08):** el usuario re-subió la foto
+  recreando el producto: hay dos muñecos en BD — `id=6`
+  `mun-eco-de-nieve-con-bufanda` con `image = NULL` (el original, quedó sin
+  foto) y `id=7` `muln-eco-de-nieve-con-bufanda` con
+  `image = /uploads/products/4895c7d1d6e04813ffeb22a93ab0cbb2.jpg` (el nuevo,
+  con la foto). Verificado en producción: la ficha de `id=7` responde 200 y
+  pinta la imagen, y el catálogo referencia `4895c7d1…`. Decisión pendiente del
+  usuario (**no pregunta ni borra por tu cuenta**): si sobra el duplicado
+  `id=6`, borrarlo (el endpoint de borrado está marcado en el README como
+  límite conocido: no borra el fichero de disco).
 - **Spec 012 `favicon-404-registro` (2026-10-08):** favicon con el logo
   (`favicon.ico` + `icon.png` + `apple-icon.png` generados desde
   `public/images/logo/logo.png` con `specs/012/iconos.mjs` y `sharp`), página
@@ -86,22 +116,28 @@
 
 ## Hallazgos QA (2026-10-07, abiertos)
 
-- **QA-1 contraseña admin:** la original del `.env` **no cumple la política
-  ADMIN** (falta puntuación) y el endpoint la rechazó con 400. La BD quedó con la
-  fuerte temporal (login 200 verificado); el txt del
-  Escritorio quedó desactualizado. **Pendiente de decisión:** dejar la fuerte y
-  actualizar `.env`+txt, o restaurar la original por BD (bypass de política).
-- **⚠️ Fuga corregida:** el valor literal de `ADMIN_PASSWORD` llegó a salir en
-  este `MEMORY.md` (commit `a96dd4c`, repo **público**). Se retiró de aquí el
-  2026-10-08; la contraseña en uso se considera **expuesta desde ese commit** y
-  conviene rotarla. Las credenciales reales solo viven en `.env` y en el txt del
+- **⚙️ QA-1 RESUELTO (2026-10-08):** la contraseña expuesta se rotó por completo.
+  La cuenta que la usaba se **desactivó** (`activo=false`, `sessionVersion+1`,
+  sesiones revocadas, email renombrado a `admin.expirado.20261008@pingo-pop.local`)
+  y se creó un admin **nuevo** con `admin@pingo-pop.local` (id=5, argon2id de la
+  contraseña nueva). Verificado en producción: login nuevo → 200 `role: ADMIN`;
+  contraseña vieja → 401. `ADMIN_PASSWORD` del `.env` (servidor y local) alineado
+  con la nueva para que un seed futuro no restaure la filtrada.
+- **⚠️ Fuga de `ADMIN_PASSWORD` (2026-10-08):** el valor literal llegó a salir en
+  este `MEMORY.md` y se publicó en el repo **público** de GitHub. Se purgó el
+  historial completo (`git filter-branch` + clon limpio, `main` reescrita) y la
+  cuenta afectada quedó desactivada. Aunque el historial esté limpio, forks o
+  cachés de GitHub pueden retener el valor; la contraseña en uso **ya no es la
+  filtrada**. Las credenciales reales solo viven en `.env` y en el txt del
   Escritorio.
 - **QA-2 uploads en producción:** (a) EACCES en `public/uploads` (app `nextjs`
   uid 1001 vs owner root) — chown en caliente hecho, **se pierde al recrear el
   contenedor** (Dockerfile sin `chown`); (b) archivos nuevos en `public/uploads/*`
   devuelven 404 hasta recrear el contenedor (Next 16 resuelve `public/` al boot);
-  no hay volumen para uploads en `docker-compose.yml`. **Pendiente de decisión:**
-  route handler dinámico (spec nueva) vs volumen + `chown` en Dockerfile.
+  no hay volumen para uploads en `docker-compose.yml`. **RESUELTO con la spec
+  011** (2026-10-08): route handler dinámico + volumen `pingo-uploads` + `chown`
+  en Dockerfile + borrado de `.gitkeep` de la imagen. Verificado en producción
+  (criterios de aceptación de la spec 011 en verde).
 
 ## Decisiones de la tanda 009 (2026-10-07)
 

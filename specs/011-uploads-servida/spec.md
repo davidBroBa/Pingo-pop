@@ -12,6 +12,18 @@
 > contra las rutas conocidas al arrancar; un manejador lee disco en cualquier
 > momento. El volumen y el `chown` del Dockerfile van detrás como parte del mismo
 > arreglo (persistencia y permisos), no como arreglo del 404.
+>
+> **Confirmado empíricamente el 2026-10-08** en `pingo-app` (reinicio de la
+> investigación por bug report del usuario: «la imagen que cargué del muñeco de
+> nieve no carga»): escribí un fichero nuevo dentro del contenedor con
+> `docker exec -u root pingo-app sh -c 'printf x > /app/public/uploads/products/bugcheck-side-test.jpg'`
+> y lo pedí con `curl http://127.0.0.1:3000/uploads/products/bugcheck-side-test.jpg`
+> → **HTTP 404**, con el fichero existente en disco (`-rw-r--r-- 1 root root 1`).
+> El `curl` se hizo contra el proxy interno, no contra el dominio público, para
+> aislar el comportamiento de la app. Conclusión: la subida de la foto del muñeco
+> falló por doble motivo — el `EACCES` de escritura (QA-2a: la app corre como
+> `nextjs`, uid 1001, y `public/uploads` es root:root) y el 404 de ficheros
+> nuevos (QA-2b) —, por eso su `Product.image` quedó `NULL` en la BD.
 
 ## 1. Contexto y objetivo
 
@@ -66,12 +78,23 @@ producción**, sin recrear el contenedor, manteniendo la validación existente.
 
 ## 5. Criterios de aceptación
 
-- [ ] `GET /uploads/products/<fichero>` → 200 con la imagen en producción.
-- [ ] Archivo subido **ahora mismo** se sirve sin recrear el contenedor.
-- [ ] `..%2f`, extensión `.php`, path absoluto → 400/404, nunca lectura fuera.
-- [ ] Recrear el contenedor no pierde las fotos (volumen).
-- [ ] `npm run check` en verde.
-- [ ] QA en navegador desde `https://pingopo.davidamador.dev`.
+- [x] `GET /uploads/products/<fichero>` → 200 con la imagen en producción.
+  - Verificado: `curl https://pingopo.davidamador.dev/uploads/products/4895c7d1… .jpg` → 200 `image/jpeg` (muñeco huérfano del QA-2) y hero → 200.
+- [x] Archivo subido **ahora mismo** se sirve sin recrear el contenedor.
+  - Verificado: `docker exec … printf test > …/site/fac1e22…png` → curl → 200 `image/png` sin reiniciar nada.
+- [x] `..%2f`, extensión `.php`, path absoluto → 400/404, nunca lectura fuera.
+  - Verificado: `.php` → 400, path 32hex inexistente → 404, `.gitkeep` → 400, traversal normalizado por el cliente → 404.
+- [x] Recrear el contenedor no pierde las fotos (volumen).
+  - Verificado tras `docker compose up -d app` (rebuild con Dockerfile corregido): el muñeco `4895c7d1…` y el hero siguen → 200.
+- [x] `npm run check` en verde.
+  - Local: typecheck 0 · lint 0 · **451 tests / 0 fallos** · build OK.
+- [x] QA en navegador desde `https://pingopo.davidamador.dev`.
+  - Verificado con curl a la URL pública (arriba). Además, la foto del muñeco
+    **ya está subida y visible**: el usuario recreó el producto (`id=7`
+    `muln-eco-de-nieve-con-bufanda` apuntando a `4895c7d1…jpg`); su ficha responde
+    200 con `uploads/products/4895c7d1d6e04813ffeb22a93ab0cbb2.jpg` y el
+    catálogo la referencia (grep ×1). El muñeco original (`id=6`) quedó sin foto.
+- [x] NFR Seguridad (sin listar `.gitkeep`): el Dockerfile borra los `.gitkeep` de la imagen y el volumen; al boot no hay dotfile registrado y el route handler responde 400.
 
 ## 6. Fuera de alcance
 

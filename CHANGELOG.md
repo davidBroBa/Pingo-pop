@@ -248,6 +248,28 @@ hidratación de `/cotizacion`, sí lo causó esta spec y quedó arreglado en T9.
   para cualquiera. Por eso el barrido de secretos es obligatorio antes de **cada**
   commit, no solo antes del primero.
 
+### Reparación (2026-10-08): botones de catálogo + servido de uploads
+
+- **Los botones de categoría de la portada llevan al catálogo filtrado.** Cada
+  tarjeta enlaza a `/products?categoria=<slug>` (`hrefCategoria()` en
+  `src/lib/category-card-props.ts`); el catálogo filtra por ese parámetro
+  (`src/lib/catalog-filter.ts`, puro y testeado). Reglas: sin parámetro o `?categoria=`
+  vacío → catálogo completo; slug válido → listado filtrado con el nombre de la
+  categoría como h1; slug inexistente o malformado → 404 propio. Las tarjetas de
+  reserva (sin categorías en BD) enlazan al catálogo completo.
+- **Las imágenes subidas se sirven en producción sin recrear el contenedor**
+  (spec `011-uploads-servida`). Causa raíz doble: Next 16 solo sirve de `public/`
+  lo que resolvió al arrancar, así que un fichero nuevo daba 404 hasta recrear; y
+  `public/uploads` llegaba a la imagen con owner `root:root`, por lo que la app
+  (corre como `nextjs`) no podía escribir (EACCES). Ahora `GET /uploads/[...path]`
+  es un route handler que lee de disco por petición (`src/lib/upload-servida.ts`,
+  puro), el `docker-compose.yml` monta un volumen named `pingo-uploads` en
+  `/app/public/uploads`, y el `Dockerfile` hace `chown nextjs:nodejs` y **elimina
+  los `.gitkeep`** de la imagen (un dotfile registrado al arranque lo servía Next
+  estático y respondía 500).
+- Verificado en producción: fichero nuevo → 200 sin reiniciar nada, `.php` → 400,
+  inexistente → 404, `.gitkeep` → 400 (antes 500), traversal → 404.
+
 ---
 
 ## [0.2.0] - 2026-10-05 — Rediseño visual cartoon (spec `002-cartoon-visual`)

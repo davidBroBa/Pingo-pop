@@ -46,6 +46,19 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/node_modules ./node_modules
 
+# Uploads escribibles por la app (spec 011, RF-5). Sin este chown la primera
+# escritura da EACCES: `public/uploads` llega root:root del COPY y la app corre
+# como nextjs (uid 1001). El volumen de docker-compose montado sobre
+# `public/uploads` hereda este owner la primera vez que se crea.
+#
+# Se borran los `.gitkeep` (RF-3): son de git, no de produccion. Si llegan a la
+# imagen, Next los registra como estaticos al arrancar y responde 500 al
+# pedirlos; sin ellos, la peticion cae en el route handler de `/uploads` que ya
+# valida la extension.
+RUN find /app/public/uploads -name '.gitkeep' -delete \
+    && mkdir -p /app/public/uploads/products /app/public/uploads/site \
+    && chown -R nextjs:nodejs /app/public/uploads
+
 USER nextjs
 
 EXPOSE 3000

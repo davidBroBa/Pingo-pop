@@ -33,7 +33,13 @@ async function leerCategorias() {
   try {
     return await prisma.category.findMany({
       orderBy: { name: "asc" },
-      select: { id: true, name: true, description: true, image: true },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        image: true,
+        slug: true,
+      },
     });
   } catch {
     // Mismo criterio que el hero: la portada no se cae por un problema de datos.

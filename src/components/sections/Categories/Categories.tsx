@@ -1,7 +1,12 @@
 import { ArrowUpRight } from "lucide-react";
+import Link from "next/link";
 
 import { Card, Typography } from "@/components/ui";
-import { construirTarjetas, type CategoriaMinima } from "@/lib/category-card-props";
+import {
+  construirTarjetas,
+  hrefCategoria,
+  type CategoriaMinima,
+} from "@/lib/category-card-props";
 
 /**
  * Red de seguridad de la seccion (RF-29).
@@ -18,12 +23,14 @@ export const CATEGORIAS_RESERVA: readonly CategoriaMinima[] = [
     name: "Pines catálogo VIP",
     description: "Pines metálicos de catálogo, con acabados profesionales.",
     image: null,
+    slug: null,
   },
   {
     id: -2,
     name: "Botones fotográficos",
     description: "Se hacen con tu foto.",
     image: null,
+    slug: null,
   },
   {
     id: -3,
@@ -31,6 +38,7 @@ export const CATEGORIAS_RESERVA: readonly CategoriaMinima[] = [
     description:
       "Réplicas ya hechas, y también figuras creadas desde tu archivo.",
     image: null,
+    slug: null,
   },
   {
     id: -4,
@@ -38,6 +46,7 @@ export const CATEGORIAS_RESERVA: readonly CategoriaMinima[] = [
     description:
       "Productos de catálogo para regalos, negocios y proyectos especiales.",
     image: null,
+    slug: null,
   },
 ];
 
@@ -78,10 +87,13 @@ export function Categories({ categorias = [] }: CategoriesProps) {
 
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           {tarjetas.map((tarjeta) => (
-            <Card
+            <Link
               key={tarjeta.id}
-              className="group relative flex min-h-[280px] flex-col overflow-hidden"
+              href={hrefCategoria(tarjeta)}
+              aria-label={`Ver productos de ${tarjeta.nombre}`}
+              className="cartoon-focus block h-full rounded-[24px]"
             >
+              <Card className="group relative flex min-h-[280px] h-full flex-col overflow-hidden">
               {/*
                 Banda de foto arriba (D12). Cuando no hay foto entra el `Pingo`
                 de reserva **en la misma caja**, para que ninguna tarjeta se vea
@@ -131,7 +143,8 @@ export function Categories({ categorias = [] }: CategoriesProps) {
                   )}
                 </div>
               </div>
-            </Card>
+              </Card>
+            </Link>
           ))}
         </div>
       </div>

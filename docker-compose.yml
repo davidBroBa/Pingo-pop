@@ -113,6 +113,13 @@ services:
     security_opt:
       - no-new-privileges:true
 
+    # Las fotos subidas viven en public/uploads dentro del contenedor; un volume
+    # dedicado hace que sobrevivan a `docker compose up --build` (spec 011,
+    # RF-5). La primera vez que se crea, el volume se inicializa con el contenido
+    # y el owner (nextjs) que fija el Dockerfile.
+    volumes:
+      - pingo-uploads:/app/public/uploads
+
     logging:
       driver: json-file
       options:
@@ -121,3 +128,4 @@ services:
 
 volumes:
   pingo-db-data:
+  pingo-uploads:

@@ -19,6 +19,8 @@ export type CategoriaMinima = {
   name: string;
   description: string | null;
   image: string | null;
+  /** Slug unico en la BD. `null` solo en la red de seguridad de la portada. */
+  slug: string | null;
 };
 
 /** Los cuatro colores cartoon de la seccion, en el orden en que se alternan. */
@@ -47,6 +49,8 @@ export type TarjetaCategoria = {
   acento: (typeof ACCENTS)[number];
   /** `true` cuando la tarjeta viene de la red de seguridad, no de la base de datos. */
   esReserva: boolean;
+  /** Slug de la categoria, para el enlace al catalogo filtrado. */
+  slug: string | null;
 };
 
 /**
@@ -87,6 +91,7 @@ function aTarjeta(categoria: CategoriaMinima, indice: number): TarjetaCategoria 
     numero: numeroPara(indice),
     acento: acentoPara(indice),
     esReserva: false,
+    slug: categoria.slug,
   };
 }
 
@@ -121,4 +126,23 @@ export function construirTarjetas(
   return categorias
     .slice(0, NUMERO_VISIBLE)
     .map((categoria, indice) => aTarjeta(categoria, indice));
+}
+
+/**
+ * Enlace al que lleva una tarjeta de la portada (bug report: «los botones de
+ * catalogo no llevan a ningun lado»).
+ *
+ * Con slug en la BD se enlaza al catalogo **filtrado** por esa categoria
+ * (`/products?categoria=<slug>`). Sin slug —la red de seguridad— cae al
+ * catalogo completo: no existe una pagina propia de categoria, y un boton que
+ * lleva a todas partes es mejor que un boton que no lleva a ninguna.
+ *
+ * @param tarjeta - Tarjeta ya construida por `construirTarjetas`.
+ * @returns Ruta de destino del enlace.
+ */
+export function hrefCategoria(tarjeta: TarjetaCategoria): string {
+  if (tarjeta.esReserva || tarjeta.slug === null) {
+    return "/products";
+  }
+  return `/products?categoria=${tarjeta.slug}`;
 }

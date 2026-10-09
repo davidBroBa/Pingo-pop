@@ -35,7 +35,7 @@ Repositorio: [`github.com/davidBroBa/Pingo-pop`](https://github.com/davidBroBa/P
 | Base de datos | MariaDB 11 / MySQL 8 | Docker en local, servicio propio en el servidor |
 | Zod | 4.6.5 | Validación en el borde de toda entrada externa |
 | argon2 | 0.45.1 | Hash de contraseñas (argon2id) |
-| Tests | `node:test` + `tsx` 4.23 | 77 suites, 419 pruebas, **sin framework adicional** |
+| Tests | `node:test` + `tsx` 4.23 | 83 suites, 451 pruebas, **sin framework adicional** |
 
 Node: **20.9 o superior** (lo exige Next 16). `package.json` no declara `engines`, así
 que npm no te avisará si usas una versión antigua: compruébalo tú (`node -v`).
@@ -114,7 +114,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 | `npm run start` | Ejecuta el build (`next start -p 3000`) |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npm test` | `node --import tsx --test "tests/**/*.test.ts"` - 419 pruebas, 77 suites |
+| `npm test` | `node --import tsx --test "tests/**/*.test.ts"` - 451 pruebas, 83 suites |
 | `npm run check` | **typecheck + lint + test + build**. Es el gate: úsalo antes de entregar |
 | `npm run db:seed` | Crea el ADMIN inicial (argon2id) |
 | `node scripts/check-control-chars.mjs <fichero>` | Detecta bytes de control que rompen el parseo de TypeScript |
@@ -125,7 +125,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 npm run check      # typecheck && lint && test && build
 ```
 
-Estado actual (2026-10-07): **typecheck OK, lint OK, 419/419 tests, build OK (38
+Estado actual (2026-10-08): **typecheck OK, lint OK, 451/451 tests, build OK (38
 rutas)**. `npm audit` deja **8 vulnerabilidades altas residuales, todas en
 herramientas de desarrollo** (`eslint-config-next → fast-glob → micromatch →
 braces`, sin parche disponible) y **no llegan a runtime**. El detalle está en
@@ -158,7 +158,7 @@ src/
 prisma/
   schema.prisma, migrations/  Las migraciones SÍ se versionan
   seed.ts, make-buyer.ts
-tests/            77 suites con node:test (sin jsdom)
+tests/            83 suites con node:test (sin jsdom)
 docs/             SDD, THREATS, DESIGN, GATES, DEPLOY, PUBLICAR, constitution
 specs/            001-pingo-rework, 002-cartoon-visual (spec, plan, tasks)
 ```
@@ -169,11 +169,12 @@ specs/            001-pingo-rework, 002-cartoon-visual (spec, plan, tasks)
 
 | Ruta | Quién | Notas |
 |---|---|---|
-| `/`, `/products`, `/products/[slug]` | Público | Catálogo |
+| `/`, `/products`, `/products/[slug]` | Público | Catálogo. `/products` acepta `?categoria=<slug>` para filtrar (vacío = catálogo completo; slug inexistente = 404) |
 | `/cotizacion` | Público | Formulario de cotización y carrito |
 | `/contacto`, `/novedades`, `/login`, `/registro` | Público | `/registro` redirige a `/` si ya hay sesión |
 | `/perfil` | Con sesión | Nombre, cambio de contraseña, cierre de sesión. Bloque extra para ADMIN |
-| `/admin/productos`, `/admin/categorias` | **ADMIN** | Middleware **y** `requireAdmin()` |
+| `/admin/productos`, `/admin/categorias`, `/admin/apariencia`, `/admin/cotizaciones`, `/admin/legal`, `/admin/usuarios` | **ADMIN** | Middleware **y** `requireAdmin()` |
+| `/uploads/[...path]` | Público | Route handler que sirve las imágenes subidas leyendo disco por petición (spec 011). Solo `products` o `site` + `<32 hex>.<jpg\|png\|webp>`; lo demás 400/404 |
 | `POST /api/auth/login`, `/api/auth/logout` | Público | Rate limit 10/15 min |
 | `POST /api/auth/register` | Público | Alta solo `BUYER` (spec 010). Rate limit 5/15 min |
 | `POST /api/account/password` | Con sesión | **Revoca todas las sesiones.** Rate limit 5/15 min |
@@ -225,24 +226,33 @@ contrastes medidos está en `docs/DESIGN.md`.
 ## Despliegue
 
 Resumen; el procedimiento completo, con los comandos que fallan y por qué, está en
-`docs/DEPLOY.md`.
+`docs/DEPLOY.md`. El despliegue actual (2026-10-08) es **Docker Compose** en el
+servidor (`srv`): servicio `app` (imagen multi-stage del `Dockerfile`, escucha
+solo en `127.0.0.1:3000`) + servicio `db` (MariaDB 11, solo loopback), con Caddy
+como reverse proxy público hacia `https://pingopo.davidamador.dev`.
 
-```bash
-# 1) Empaquetar sin secretos ni artefactos
-tar -czf pp.tgz --exclude=node_modules --exclude=.next --exclude=.env \
-    --exclude=docker-compose.override.yml --exclude=*.tsbuildinfo --exclude=.git \
-    -C /ruta/al/proyecto .
-scp pp.tgz srv:/tmp/
+```powershell
+# 1) Gates en verde antes de tocar el servidor (local)
+npm run check
 
-# 2) En el servidor
+# 2) Empaquetar sin secretos ni artefactos
+$tmp = "$env:TEMP\pp-sync.tgz"
+tar -czf $tmp --exclude=node_modules --exclude=.next --exclude=.env ^
+    --exclude=docker-compose.override.yml --exclude=*.tsbuildinfo --exclude=.git ^
+    -C "C:\ruta\al\proyecto" .
+scp $tmp srv:/tmp/pp-sync.tgz
+
+# 3) En el servidor: respaldar, extraer, construir y recrear
 cd ~/proyectos/pingo-pop
-tar -xzf /tmp/pp.tgz
-npm run build
-
-# 3) Reiniciar producción
-kill <pid-anterior>
-setsid nohup npm run start > /tmp/pingo-pop-start.log 2>&1 < /dev/null &
+cp -a src /tmp/pp-src-backup-<n>
+tar -xzf /tmp/pp-sync.tgz
+docker compose build app
+docker compose up -d app
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3000/
 ```
+
+Los uploads viven en el volumen named `pingo-uploads` (spec 011): sobreviven a
+`docker compose up --build` y se sirven al momento sin recrear el contenedor.
 
 Dos avisos que cuestan tiempo si no los conoces:
 

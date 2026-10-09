@@ -6,6 +6,7 @@ import {
   NUMERO_VISIBLE,
   acentoPara,
   construirTarjetas,
+  hrefCategoria,
   numeroPara,
 } from "../src/lib/category-card-props";
 
@@ -18,10 +19,11 @@ type Categoria = {
   name: string;
   description: string | null;
   image: string | null;
+  slug: string | null;
 };
 
 function cat(id: number, name: string, image: string | null = null): Categoria {
-  return { id, name, description: `Descripcion de ${name}`, image };
+  return { id, name, description: `Descripcion de ${name}`, image, slug: `${id}-slug` };
 }
 
 /** Las 4 categorias escritas a mano que hay hoy, como red de seguridad. */
@@ -155,7 +157,7 @@ describe("construirTarjetas", () => {
 
   it("una descripcion ausente sale cadena vacia, no undefined", () => {
     const tarjetas = construirTarjetas(
-      [{ id: 1, name: "A", description: null, image: null }],
+      [{ id: 1, name: "A", description: null, image: null, slug: null }],
       RESERVA,
     );
     assert.equal(tarjetas[0].descripcion, "");
@@ -166,6 +168,29 @@ describe("construirTarjetas", () => {
     for (const t of tarjetas) {
       assert.equal(t.esReserva, true);
       assert.ok(t.descripcion.length > 0, "la reserva trae descripcion");
+    }
+  });
+});
+
+describe("hrefCategoria", () => {
+  it("una categoria de la BD con slug enlaza al catalogo filtrado", () => {
+    const [tarjeta] = construirTarjetas([cat(7, "Pines", null)], RESERVA);
+    assert.equal(hrefCategoria(tarjeta), "/products?categoria=7-slug");
+  });
+
+  it("una categoria sin slug cae al catalogo completo", () => {
+    const [tarjeta] = construirTarjetas(
+      [{ id: 8, name: "Textil", description: null, image: null, slug: null }],
+      RESERVA,
+    );
+    assert.equal(hrefCategoria(tarjeta), "/products");
+  });
+
+  it("una tarjeta de reserva enlaza al catalogo completo", () => {
+    const tarjetas = construirTarjetas([], RESERVA);
+    for (const t of tarjetas) {
+      assert.equal(t.esReserva, true);
+      assert.equal(hrefCategoria(t), "/products");
     }
   });
 });

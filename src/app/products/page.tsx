@@ -1,6 +1,9 @@
+import { notFound } from "next/navigation";
+
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { MainLayout } from "@/components/layout";
+import { tipoFiltroCategoria } from "@/lib/catalog-filter";
 
 /**
  * El catalogo se lee de la base de datos en cada peticion, no al compilar.
@@ -12,10 +15,42 @@ import { MainLayout } from "@/components/layout";
  */
 export const dynamic = "force-dynamic";
 
-export default async function ProductsPage() {
+/**
+ * El catalogo, opcionalmente filtrado por categoria.
+ *
+ * El parametro `categoria` (slug) llega desde las tarjetas de la portada
+ * (`/products?categoria=<slug>`) y desde aqui mismo. La interpretacion del
+ * valor crudo la hace un modulo puro y testeable (`tipoFiltroCategoria`); un
+ * slug de formato invalido o inexistente responde 404, como hace el detalle de
+ * producto con su slug.
+ *
+ * @param props - `searchParams` es un `Promise` en Next 16, se lee con `await`.
+ */
+export default async function ProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const filtro = tipoFiltroCategoria((await searchParams).categoria);
+  if (filtro.tipo === "invalido") {
+    notFound();
+  }
+
+  const categoria =
+    filtro.tipo === "slug"
+      ? await prisma.category.findUnique({
+          where: { slug: filtro.slug },
+          select: { id: true, name: true },
+        })
+      : null;
+  if (filtro.tipo === "slug" && categoria === null) {
+    notFound();
+  }
+
   const products = await prisma.product.findMany({
     where: {
       active: true,
+      ...(categoria !== null ? { categoryId: categoria.id } : {}),
     },
     include: {
       category: true,
@@ -41,12 +76,28 @@ export default async function ProductsPage() {
           </p>
 
           <h1 className="text-5xl font-bold text-primary">
-            Catálogo
+            {categoria !== null ? categoria.name : "Catálogo"}
           </h1>
 
           <p className="mt-4 text-lg text-foreground-muted">
-            Pines metálicos, llaveros, réplicas en impresión 3D, acrílicos y
-            fotobotones. Pedidos al mayoreo para negocios.
+            {categoria !== null ? (
+              <>
+                Productos de{" "}
+                <span className="font-semibold text-primary">{categoria.name}</span>
+                .{" "}
+                <Link
+                  href="/products"
+                  className="cartoon-focus text-primary underline-offset-4 transition-colors hover:underline"
+                >
+                  Ver todo el catálogo
+                </Link>
+              </>
+            ) : (
+              <>
+                Pines metálicos, llaveros, réplicas en impresión 3D, acrílicos y
+                fotobotones. Pedidos al mayoreo para negocios.
+              </>
+            )}
           </p>
         </div>
 
